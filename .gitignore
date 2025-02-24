@@ -1,5 +1,7 @@
 dataset_loader/datasets
 ground_truth
 venv
+python/security_related/datasets/TII-SSRC-23/pcap
+python/security_related/datasets/TII-SSRC-23/csv
 /python/security_related/datasets/UNSW-NB15/eve_files
 /python/security_related/datasets/UNSW-NB15/gt
