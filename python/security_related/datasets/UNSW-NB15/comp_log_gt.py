@@ -17,9 +17,9 @@ def progress_bar(current, total):
     print()
      
 def init_gt():
-    df_gt = pd.read_csv('./UNSW-NB15_1.csv')
+    df_gt = pd.read_csv('./python/security_related/datasets/UNSW-NB15/gt/UNSW-NB15_1.csv')
     # This csv file contains names of all the features
-    df_col = pd.read_csv('./NUSW-NB15_features.csv', encoding='ISO-8859-1')
+    df_col = pd.read_csv('../python/security_related/datasets/UNSW-NB15/gt/NUSW-NB15_features.csv', encoding='ISO-8859-1')
     # Making column names lower case, removing spaces
     df_col['Name'] = df_col['Name'].apply(lambda x: x.strip().replace(' ', '').lower())
     # Renaming our dataframe with proper column names
@@ -65,7 +65,7 @@ def init_gt():
     df_gt = df_gt[df_gt['src_ip'].str.contains(r'^\d', na=False)]
     df_gt = df_gt[df_gt['dest_ip'].str.contains(r'^\d', na=False)]
     # Save the shortened dataframes to CSV
-    df_gt.to_csv("gt_short.csv", index=False)
+    #df_gt.to_csv("gt_short.csv", index=False)
 
     # Convert the port columns to integers
     df_gt['src_port'] = df_gt['src_port'].astype(int)
@@ -86,7 +86,7 @@ def json_to_csv(file_path):
 
 
         # Save to CSV
-        df_sur.to_csv("eve.csv", index=False)
+        #df_sur.to_csv("eve.csv", index=False)
 
         print("Nested JSON converted successfully!")
         # Save csv file in the same directory
@@ -94,7 +94,7 @@ def json_to_csv(file_path):
 
 
 # Load all files in /eve_files/ directory
-files = glob.glob("./eve_files/*/eve.json")
+files = glob.glob("./python/security_related/datasets/UNSW-NB15/eve_files/*/eve.json")
 print(files)
 tot_true_pos = 0
 tot_false_pos = 0
@@ -138,7 +138,7 @@ for file_path in files:
     df_sur = df_sur[df_sur['dest_ip'].str.contains(r'^\d', na=False)]
     
     # Save the shortened dataframes to CSV
-    df_sur.to_csv("eve_short.csv", index=False)
+    #df_sur.to_csv("eve_short.csv", index=False)
     
 
     # Convert the port columns to integers
@@ -151,7 +151,7 @@ for file_path in files:
     # Drop NaN rows
     df_merged.dropna(inplace=True)
     # save to csv
-    df_merged.to_csv("merged.csv", index=False)
+    #df_merged.to_csv("merged.csv", index=False)
     # Extract all column with "event_type" = alert also extract rows when "event_type" != alert but "label" = true
     df_true_negative = df_merged[(df_merged["event_type"] != "alert") & (df_merged["label"] == False)] # Number of true negatives
     df_false_negatives = df_merged[(df_merged["event_type"] != "alert") & (df_merged["label"] == True)] # Number of false negatives
