@@ -3,8 +3,8 @@ import pandas as pd
 import json
 import glob
 from datetime import datetime
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
-
+import seaborn as sns
+import matplotlib.pyplot as plt
 def progress_bar(current, total):
     print()
     print('[', end='')
@@ -204,7 +204,14 @@ print("Recall:", recall)
 print("Precision:", precision)
 print("F1 score:", f1)
 
-
+# Visualize with seaborn
+cm = np.array([[tot_true_pos, tot_false_neg],[tot_false_pos, tot_true_neg]])
+labels = ['True Pos','False Neg','False Pos','True Neg']
+labels = np.asarray(labels).reshape(2,2)
+sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
 
 """
 Necessary protocol fields for network traffic analysis include:
