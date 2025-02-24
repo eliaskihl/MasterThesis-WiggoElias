@@ -19,7 +19,7 @@ def progress_bar(current, total):
 def init_gt():
     df_gt = pd.read_csv('./python/security_related/datasets/UNSW-NB15/gt/UNSW-NB15_1.csv')
     # This csv file contains names of all the features
-    df_col = pd.read_csv('../python/security_related/datasets/UNSW-NB15/gt/NUSW-NB15_features.csv', encoding='ISO-8859-1')
+    df_col = pd.read_csv('./python/security_related/datasets/UNSW-NB15/gt/NUSW-NB15_features.csv', encoding='ISO-8859-1')
     # Making column names lower case, removing spaces
     df_col['Name'] = df_col['Name'].apply(lambda x: x.strip().replace(' ', '').lower())
     # Renaming our dataframe with proper column names
