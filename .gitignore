@@ -1,2 +1,5 @@
 dataset_loader/datasets
 ground_truth
+venv
+/python/security_related/datasets/UNSW-NB15/eve_files
+/python/security_related/datasets/UNSW-NB15/gt
