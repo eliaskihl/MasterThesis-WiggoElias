@@ -95,12 +95,18 @@ def json_to_csv(file_path):
 
 def main(path):
     # Load all files in /eve_files/ directory
-    files = glob.glob("./python/security_related/datasets/UNSW-NB15/eve_files/*/eve.json")
+    file_path = path + "/*/eve.json"
+    files = glob.glob(file_path)
     print(files)
+    idx = range(0,len(files)-1)
     tot_true_pos = 0
     tot_false_pos = 0
     tot_false_neg = 0
     tot_true_neg = 0
+    list_acc = []
+    list_recall = []
+    list_precision = []
+    list_f1 = []
     df_gt = init_gt()
     for file_path in files:
         
@@ -178,7 +184,16 @@ def main(path):
         tot_false_pos = tot_false_pos + len(false_pos)
         tot_false_neg = tot_false_neg + len(df_false_negatives)
         tot_true_neg = tot_true_neg + len(df_true_negative)
-
+        # Save the accuracy, recall, precision, and F1 score
+        if (len(df_true_negative) + len(true_pos) + len(false_pos) + len(df_false_negatives)) != 0: list_acc.append((len(true_pos) + len(df_true_negative)) / (len(df_true_negative) + len(true_pos) + len(false_pos) + len(df_false_negatives))) 
+        else: list_acc.append(0)
+        if (len(true_pos) + len(df_false_negatives)) != 0: list_recall.append(len(true_pos) / (len(true_pos) + len(df_false_negatives))) 
+        else: list_recall.append(0)
+        if (len(true_pos) + len(false_pos)) != 0: list_precision.append(len(true_pos) / (len(true_pos) + len(false_pos)))
+        else: list_precision.append(0)
+        if (list_precision[-1] + list_recall[-1]) != 0: list_f1.append(2 * (list_precision[-1] * list_recall[-1]) / (list_precision[-1] + list_recall[-1]))
+        else: list_f1.append(0)
+        # Progress bar
         progress_bar(files.index(file_path)+1, (len(files)))
 
     print("=====================================")
@@ -213,27 +228,14 @@ def main(path):
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
     plt.show()
+    plt.plot(list_acc, label='Accuracy')
+    plt.plot(list_recall, label='Recall')
+    plt.plot(list_precision, label='Precision')
+    plt.plot(list_f1, label='F1 score')
+    plt.legend()
+    plt.xlabel("File num")
+    plt.ylabel("Value")
+    plt.show()
 
-    """
-    Necessary protocol fields for network traffic analysis include:
 
-    Source and Destination IP/Port (to understand where traffic originates and is heading):
-    'src_ip', 'dest_ip','src_port','dest_port'
-    Transaction Protocol (to know which protocol triggered the alert).
-    'proto', 'app_proto'
-    Alert Signature and Category (to determine what caused the alert).
-    'alert.signature', 'alert.category'
-    Bytes and Packet Count (to assess the scale of the transaction).
-    'flow.bytes_toserver', 'flow.bytes_toclient', 'flow.pkts_toserver', 'flow.pkts_toclient'
-    State (to understand the connection state).
-    'flow.state'
-    Time-to-Live (TTL) (to analyze the network proximity of the source).
-    i can only find ttl for dns (dns.ttl)
-    Service (if applicable) (to understand the type of service being targeted).
-    Alert Tags (for additional context and attack correlation).
-    """
-
-    # Step 1: Use the lowest amount of column necessary for correctly classifying all ground truth alerts as intrusion
-    # Step 2: Compare the alerts with the ground truth to generate a confusion matrix
-    # Step 3: Calculate the accuracy of the IDS
-    # Step 4: Plot all security related measurements
+#main("python/security_related/datasets/UNSW-NB15/eve_files")
