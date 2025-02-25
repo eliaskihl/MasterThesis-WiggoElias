@@ -1,7 +1,12 @@
-dataset_loader/datasets
-ground_truth
 venv
+img
 python/security_related/datasets/TII-SSRC-23/pcap
-python/security_related/datasets/TII-SSRC-23/csv
-/python/security_related/datasets/UNSW-NB15/eve_files
-/python/security_related/datasets/UNSW-NB15/gt
+python/security_related/datasets/TII-SSRC-23/ground_truth
+python/security_related/datasets/UNSW-NB15/pcap
+python/security_related/datasets/UNSW-NB15/ground_truth
+python/security_related/datasets/suricata/logs
+python/security_related/datasets/suricata/config
+python/security_related/datasets/snort/logs
+python/security_related/datasets/snort/config
+python/security_related/datasets/zeek/logs
+python/security_related/datasets/zeek/config
