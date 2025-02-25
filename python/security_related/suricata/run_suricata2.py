@@ -1,12 +1,13 @@
 import os
 import subprocess
 from UNSW_NB15 import main
-
-def run_suricata(dataset,path_to_pcap_files):
+import glob
+ 
+def run_suricata(dataset, path_to_pcap_file,x,path_to_output): # will be x+1
     """Run Suricata on the provided PCAP files."""
-    outputdir =  os.path.abspath(f"python/security_related/datasets/{dataset}/eve_files")
-    cmd = ["sudo", "suricata", "-r", path_to_pcap_files, "-l", outputdir , "--runmode=workers"]
- # Hardcoded path to dir?
+    # Convert Windows path to WSL path
+    
+    cmd = ["sudo","suricata", "-r", path_to_pcap_file, "-l", path_to_output]
     subprocess.run(cmd, check=True)
 
 # write message to console and expect user input
@@ -14,16 +15,23 @@ def prompt_user(message):
     print(message)
     return input()
 
-dataset = prompt_user("Choose dataset to run Suricata on: \n [1] - UNSW-NB15 \n [2] - TII_SSRC_23")
 
-if dataset == "1":
-    path_to_output = f"python/security_related/datasets/{dataset}/eve_files"
-    # Run Suricata on the UNSW-NB15 dataset
-    # Run suricata on the directory of the pcap file should return the path to the directory of the eve files
+
+# MAIN PROMPT
+dataset = prompt_user("Choose dataset to run Suricata on: \n [1] - UNSW-NB15 \n [2] - TII_SSRC_23")
+if dataset == "1": # UNSW-NB15
+    dataset = "UNSW-NB15"
     path_to_input = prompt_user("Where is you pcap files located?") # Needs to be in format /path/to/pcapfiles/1...10/*.pcap
-    # serach the directory for the pcap files and send the path to the run_suricata function
-    print(path_to_input)
-    run_suricata(dataset,path_to_input)
+    path_to_input = os.path.normpath(path_to_input)  # Normalize Windows path to avoid issues
+
+    # Search the given directory in "path_to_input" for all pcap files
+    file_path = os.path.join(path_to_input, "*.pcap")
+    
+    files = glob.glob(file_path)
+    for x,file in enumerate(files):
+        path_to_output = os.path.join("python", "security_related", "datasets", dataset, "eve_files", str(x+1))
+        print(file)
+        run_suricata(dataset,file,(x+1),path_to_output)
     main(path_to_output)
 
-
+#/mnt/c/Users/It/Downloads/
