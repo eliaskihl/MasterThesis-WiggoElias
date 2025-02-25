@@ -6,10 +6,8 @@ from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, r
 from TII_SSRC_23 import process_tii_ssrc_23_logs
 from UNSW_NB15 import process_unsw_nb15_logs
 
-
-def run_dataset(dataset, pcap_name):
-    """Run Suricata on a specified dataset and PCAP file."""
-    # Define dataset base paths
+def run_dataset(dataset, pcap_path):
+    """Run Suricata on a specified dataset and either a single PCAP file or all PCAP files in a folder."""
     dataset_paths = {
         "TII-SSRC-23": "../datasets/TII-SSRC-23",
         "UNSW-NB15": "../datasets/UNSW-NB15"
@@ -18,26 +16,27 @@ def run_dataset(dataset, pcap_name):
     if dataset not in dataset_paths:
         raise ValueError("Invalid dataset. Choose from: " + ", ".join(dataset_paths.keys()))
     
-    pcap_file = os.path.join(dataset_paths[dataset], "pcap", pcap_name)
+    full_path = os.path.join(dataset_paths[dataset], "pcap", pcap_path)
     
-    if not os.path.isfile(pcap_file):
-        raise FileNotFoundError(f"PCAP file not found: {pcap_file}")
+    # Check if the given path is a file or a folder
+    if os.path.isfile(full_path):
+        pcap_files = [full_path]  # Process a single file
+    elif os.path.isdir(full_path):
+        pcap_files = [os.path.join(full_path, f) for f in os.listdir(full_path) if f.endswith(".pcap")]
+    else:
+        raise FileNotFoundError(f"PCAP file or folder not found: {full_path}")
     
-    """Run Suricata on the provided PCAP file."""
-    cmd = ["sudo", "suricata", "-r", pcap_file, "-l", "./logs", "-v"]
-    process = subprocess.Popen(cmd)  
-    process.wait()
-    
-    process_logs(dataset, pcap_file)
-    return dataset, pcap_name
+    # Run Suricata on each PCAP file
+    for pcap_file in pcap_files:
+        print(f"Processing: {pcap_file}")
+        
+        cmd = ["sudo", "suricata", "-r", pcap_file, "-l", "./logs", "-v"]
+        process = subprocess.Popen(cmd)
+        process.wait()
+        
+        process_logs(dataset, pcap_file)
 
-
-def main():
-    parser = argparse.ArgumentParser(description="Run Suricata on a specified dataset and PCAP file.")
-    parser.add_argument("dataset", choices=["TII-SSRC-23", "UNSW-NB15"], help="Choose a dataset")
-    parser.add_argument("pcap_name", help="Specify the PCAP file name within the dataset")
-    args = parser.parse_args()
-    run_dataset(args.dataset, args.pcap_name)
+    return dataset, pcap_files
 
 def process_logs(dataset, pcap_file):
     """Process the Suricata logs based on the selected dataset."""
@@ -48,6 +47,12 @@ def process_logs(dataset, pcap_file):
     else:
         print(f"No processing logic available for the dataset: {dataset}")
 
+def main():
+    parser = argparse.ArgumentParser(description="Run Suricata on a specified dataset and PCAP file/folder.")
+    parser.add_argument("dataset", choices=["TII-SSRC-23", "UNSW-NB15"], help="Choose a dataset")
+    parser.add_argument("pcap_path", help="Specify a PCAP file or folder name within the dataset")
+    args = parser.parse_args()
+    run_dataset(args.dataset, args.pcap_path)
 
 if __name__ == "__main__":
     main()
