@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 def progress_bar(current, total):
     print()
     print('[', end='')
-    for i in range(total):
+    for i in range(len(total)):
         if i < current:
             print('=', end='')
         else:
@@ -17,28 +17,18 @@ def progress_bar(current, total):
     print()
      
 def init_gt():
-    df_gt = pd.read_csv('./python/security_related/datasets/UNSW-NB15/gt/UNSW-NB15_1.csv')
-    # This csv file contains names of all the features
-    df_col = pd.read_csv('./python/security_related/datasets/UNSW-NB15/gt/NUSW-NB15_features.csv', encoding='ISO-8859-1')
-    # Making column names lower case, removing spaces
-    df_col['Name'] = df_col['Name'].apply(lambda x: x.strip().replace(' ', '').lower())
-    # Renaming our dataframe with proper column names
-    df_gt.columns = df_col['Name']
-
+    df_gt = pd.read_csv('./python/security_related/datasets/UNSW-NB15/ground_truth/NUSW-NB15_GT.csv')
+    print(df_gt.columns)
 
     # Define a manual mapping for column names needs constant updating for new datasets
     column_mapping = {
-        "srcip": "src_ip",
-        "sport": "src_port",
-        "dstip": "dest_ip",
-        "dsport": "dest_port",
-        "stime" : "timestamp",
-        "state": "flow.state",
-        "service": "app_proto",
-        "sbytes": "flow.bytes_toserver",
-        "dbytes": "flow.bytes_toclient",
-        "timestamp" : "flow.time",
-        "service" : "app_proto",
+        "Source IP": "src_ip",
+        "Source Port": "src_port",
+        "Destination IP": "dest_ip",
+        "Destination Port": "dest_port",
+        "Start time" : "timestamp",
+        "Protocol" : "proto",
+        "Attack Name" : "label"
         # Add more mappings if needed
     }
 
@@ -49,6 +39,7 @@ def init_gt():
                     'label',
                     ]] 
     df_gt.dropna(inplace=True)
+    print(df_gt.columns)
     # Make "proto" column lowercase in both dataframes
     df_gt['proto'] = df_gt['proto'].str.lower()
     # If df_gt contains non integer values in "dest_port" or "src_port" drop the row
@@ -58,10 +49,8 @@ def init_gt():
     # Drop rows where src_port or dest_port is NaN (i.e., non-numeric values)
     df_gt = df_gt.dropna(subset=["src_port", "dest_port"])
     
-    df_gt['label'] = df_gt['label'].replace(0, False)
-    df_gt['label'] = df_gt['label'].replace(1, True)
     # If ip_src or ip_dst doest not start with a number, drop the row
-   
+
     df_gt = df_gt[df_gt['src_ip'].str.contains(r'^\d', na=False)]
     df_gt = df_gt[df_gt['dest_ip'].str.contains(r'^\d', na=False)]
     # Save the shortened dataframes to CSV
@@ -95,7 +84,7 @@ def json_to_csv(file_path):
 
 def main(path):
     # Load all files in /eve_files/ directory
-    file_path = path + "/*/eve.json"
+    file_path = path + "/eve.json"
     files = glob.glob(file_path)
     print(files)
     idx = range(0,len(files)-1)
@@ -152,49 +141,43 @@ def main(path):
         df_sur['src_port'] = df_sur['src_port'].astype(int)
         df_sur['dest_port'] = df_sur['dest_port'].astype(int)
         
-        # Merge the two dataframes on the common columns
-        df_merged = pd.merge(df_sur, df_gt, on=['src_ip', 'dest_ip','src_port','dest_port', 'proto'], how='inner', suffixes=('_suricata', '_gt'))
-
-        # Drop NaN rows
-        df_merged.dropna(inplace=True)
-        # save to csv
-        #df_merged.to_csv("merged.csv", index=False)
-        # Extract all column with "event_type" = alert also extract rows when "event_type" != alert but "label" = true
-        df_true_negative = df_merged[(df_merged["event_type"] != "alert") & (df_merged["label"] == False)] # Number of true negatives
-        df_false_negatives = df_merged[(df_merged["event_type"] != "alert") & (df_merged["label"] == True)] # Number of false negatives
-        df_alerts = df_merged[df_merged['event_type'] == "alert"]
-        df_merged = pd.concat([df_false_negatives, df_alerts], ignore_index=True)
-
-
-
-        # print("df_merged:")
-        # print(df_merged.head(5))
-
-        true_pos = df_merged[(df_merged["event_type"] == "alert") & (df_merged["label"] == True)]
-        false_pos = df_merged[(df_merged["event_type"] == "alert") & (df_merged["label"] == False)]
+        # Extarct rows with alerts
+        df_sur_alerts = df_sur[df_sur['event_type'] == 'alert']
         
+        df_merged = pd.merge(df_sur, df_gt, on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'], how='inner', indicator=True)
+        
+        # Compare alerts to ground truth
+        
+
+        true_pos = len(df_merged[(df_merged["event_type"] == "alert")])
+        #false_pos = len(df_sur_alerts) - len(df_merged[df_merged['event_type'] == 'alert']) # 2429
+        false_pos = len(df_sur_alerts) - true_pos  
+         # för nu får vi alla klassificerade som not "alerts" och vi vet vilka alerts som är felklasifcerade
+        false_neg = len(df_merged[(df_merged["event_type"] != "alert")])
+        true_neg = len(df_sur['event_type'] != 'alert') - false_neg
+
         print("File name:", file_path)
-        print("Alerts:", len(df_alerts))
-        print("True positives:", len(true_pos))
-        print("False positives:", len(false_pos))
-        print("True negatives:", len(df_true_negative))
-        print("False negatives:", len(df_false_negatives))
+        print("True positives:", true_pos)
+        print("False positives:", false_pos)
+        print("False negatives:", false_neg)
+
+
         # Add to the total count
-        tot_true_pos = tot_true_pos + len(true_pos)
-        tot_false_pos = tot_false_pos + len(false_pos)
-        tot_false_neg = tot_false_neg + len(df_false_negatives)
-        tot_true_neg = tot_true_neg + len(df_true_negative)
+        tot_true_pos = tot_true_pos + (true_pos)
+        tot_false_pos = tot_false_pos + (false_pos)
+        tot_false_neg = tot_false_neg + (false_neg)
+        tot_true_neg = tot_true_neg + (true_neg)
         # Save the accuracy, recall, precision, and F1 score
-        if (len(df_true_negative) + len(true_pos) + len(false_pos) + len(df_false_negatives)) != 0: list_acc.append((len(true_pos) + len(df_true_negative)) / (len(df_true_negative) + len(true_pos) + len(false_pos) + len(df_false_negatives))) 
+        if ((true_neg) + (true_pos) + (false_pos) + (false_neg)) != 0: list_acc.append(((true_pos) + (true_neg)) / ((true_neg) + (true_pos) + (false_pos) + (false_neg))) 
         else: list_acc.append(0)
-        if (len(true_pos) + len(df_false_negatives)) != 0: list_recall.append(len(true_pos) / (len(true_pos) + len(df_false_negatives))) 
+        if ((true_pos) + (false_neg)) != 0: list_recall.append((true_pos) / ((true_pos) + (false_neg))) 
         else: list_recall.append(0)
-        if (len(true_pos) + len(false_pos)) != 0: list_precision.append(len(true_pos) / (len(true_pos) + len(false_pos)))
+        if ((true_pos) + (false_pos)) != 0: list_precision.append((true_pos) / ((true_pos) + (false_pos)))
         else: list_precision.append(0)
         if (list_precision[-1] + list_recall[-1]) != 0: list_f1.append(2 * (list_precision[-1] * list_recall[-1]) / (list_precision[-1] + list_recall[-1]))
         else: list_f1.append(0)
         # Progress bar
-        progress_bar(files.index(file_path)+1, (len(files)))
+        progress_bar(files.index(file_path)+1, ((files)))
 
     print("=====================================")
     # After for loop print values
@@ -227,7 +210,8 @@ def main(path):
     sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
-    plt.show()
+    plt.savefig('./sns.png')
+    plt.close()
     plt.plot(list_acc, label='Accuracy')
     plt.plot(list_recall, label='Recall')
     plt.plot(list_precision, label='Precision')
@@ -235,7 +219,8 @@ def main(path):
     plt.legend()
     plt.xlabel("File num")
     plt.ylabel("Value")
-    plt.show()
+    plt.savefig('./plot.png')
+    plt.close()
 
 
-#main("python/security_related/datasets/UNSW-NB15/eve_files")
+main("python/security_related/suricata/logs/")
