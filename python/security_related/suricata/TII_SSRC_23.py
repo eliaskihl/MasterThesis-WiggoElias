@@ -29,7 +29,9 @@ def process_tii_ssrc_23_logs(pcap_file):
 
     df_gt = df_gt[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'timestamp', 'proto', 'flow_alerted']]  # Keep only necessary columns
 
-    # Replace values
+    pd.set_option('future.no_silent_downcasting', True)
+
+    # Your replace operation
     df_gt['flow_alerted'] = df_gt['flow_alerted'].replace({'Benign': False, 'Malicious': True})
     df_gt['proto'] = df_gt['proto'].replace({6.0: 'TCP', 17.0: 'UDP', 0.0: 'HOPOPT'})
 
@@ -52,31 +54,12 @@ def process_tii_ssrc_23_logs(pcap_file):
     df_fp = df_merged[(df_merged["flow_alerted_x"] == False) & (df_merged["flow_alerted_y"] == True)]
     df_fn = df_merged[(df_merged["flow_alerted_x"] == True) & (df_merged["flow_alerted_y"] == False)]
     
-    print(f"True positives: {len(df_tp)}")
-    print(f"False positives: {len(df_fp)}")
-    print(f"True negatives: {len(df_tn)}")
-    print(f"False negatives: {len(df_fn)}")
+
 
     tot_true_pos = tot_false_pos = tot_false_neg = tot_true_neg = 0
-
-
     tot_true_pos += len(df_tp)
     tot_false_pos += len(df_fp)
     tot_false_neg += len(df_fn)
     tot_true_neg += len(df_tn)
-    
-    print("=====================================")
-    print(f"Total True positives: {tot_true_pos}")
-    print(f"Total False positives: {tot_false_pos}")
-    print(f"Total False negatives: {tot_false_neg}")
-    print(f"Total True negatives: {tot_true_neg}")
 
-    accuracy = (tot_true_pos + tot_true_neg) / (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) if (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) != 0 else 0
-    recall = tot_true_pos / (tot_true_pos + tot_false_neg) if (tot_true_pos + tot_false_neg) != 0 else 0
-    precision = tot_true_pos / (tot_true_pos + tot_false_pos) if (tot_true_pos + tot_false_pos) != 0 else 0
-    f1 = 2 * (precision * recall) / (precision + recall) if precision + recall != 0 else 0
-
-    print(f"Accuracy: {accuracy}")
-    print(f"Recall: {recall}")
-    print(f"Precision: {precision}")
-    print(f"F1 score: {f1}")
+    return(tot_true_pos, tot_false_pos,tot_false_neg,tot_true_neg)

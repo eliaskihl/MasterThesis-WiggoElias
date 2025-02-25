@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 
 
 def process_unsw_nb15_logs(pcap_file):
@@ -19,9 +20,15 @@ def process_unsw_nb15_logs(pcap_file):
     df_gt.rename(columns=column_mapping, inplace=True)
 
     df_gt = df_gt[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'flow_alerted']]  # Keep only necessary columns
+    pd.set_option('future.no_silent_downcasting', True)
+
     df_gt['flow_alerted'] = df_gt['flow_alerted'].replace({0: False, 1: True})
 
-    df_suricata = pd.read_json('./logs/eve.json', lines=True)
+    log_file = './logs/eve.json'
+    if not os.path.exists(log_file):
+        print(f"Suricata log file not found for {pcap_file}. Skipping...")
+        return
+    df_suricata = pd.read_json(log_file, lines=True)
     df_suricata = df_suricata[df_suricata['event_type'] == 'flow']
     df_suricata["flow_alerted"] = df_suricata["flow"].apply(lambda x: x.get("alerted", False) if isinstance(x, dict) else False)
 
@@ -43,11 +50,7 @@ def process_unsw_nb15_logs(pcap_file):
     df_fp = df_merged[(df_merged["flow_alerted_x"] == False) & (df_merged["flow_alerted_y"] == True)]
     df_fn = df_merged[(df_merged["flow_alerted_x"] == True) & (df_merged["flow_alerted_y"] == False)]
     
-    print(f"Pcap file with path: {pcap_file}")
-    print(f"True positives: {len(df_tp)}")
-    print(f"False positives: {len(df_fp)}")
-    print(f"True negatives: {len(df_tn)}")
-    print(f"False negatives: {len(df_fn)}")
+
 
     tot_true_pos = tot_false_pos = tot_false_neg = tot_true_neg = 0
 
@@ -56,7 +59,8 @@ def process_unsw_nb15_logs(pcap_file):
     tot_false_pos += len(df_fp)
     tot_false_neg += len(df_fn)
     tot_true_neg += len(df_tn)
-    
+
+    print(f"Pcap file with path: {pcap_file}")
     print("=====================================")
     print(f"Total True positives: {tot_true_pos}")
     print(f"Total False positives: {tot_false_pos}")
@@ -72,3 +76,5 @@ def process_unsw_nb15_logs(pcap_file):
     print(f"Recall: {recall}")
     print(f"Precision: {precision}")
     print(f"F1 score: {f1}")
+
+
