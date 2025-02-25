@@ -1,10 +1,11 @@
 # Process for running the program ###
+##### Must be run in WSL or Linux
 ### Step 1
 Have a folder with pcap files for a dataset that is given in the program (UNSW-NB15, TI-SSRC-23, etc)
 ### Step 2
 Select which IDS to use
 ### Step 3
-When running an IDS it will ask you to give the paht of the pcap folder
+When running an IDS it will ask you to give the path of the pcap folder
 ### Step 4
 Program runs file and returns a confusion matrix (add ROC curve)
 ### Step 5
