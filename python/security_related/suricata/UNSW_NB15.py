@@ -5,48 +5,11 @@ import glob
 from datetime import datetime
 import seaborn as sns
 import matplotlib.pyplot as plt
-def progress_bar(current, total):
-    print()
-    print('[', end='')
-    for i in range(len(total)):
-        if i < current:
-            print('=', end='')
-        else:
-            print(' ', end='')
-    print(']', end='')
-    print()
-     
-def init_gt():
-    df_gt = pd.read_csv('./python/security_related/datasets/UNSW-NB15/ground_truth/NUSW-NB15_GT.csv')
-    print(df_gt.columns)
 
-   import numpy as np
-import pandas as pd
-import json
-import glob
-from datetime import datetime
-import seaborn as sns
-import matplotlib.pyplot as plt
-def progress_bar(current, total):
-    print()
-    print('[', end='')
-    for i in range(total):
-        if i < current:
-            print('=', end='')
-        else:
-            print(' ', end='')
-    print(']', end='')
-    print()
-     
 def init_gt():
-    df_gt = pd.read_csv('./python/security_related/datasets/UNSW-NB15/gt/UNSW-NB15_1.csv')
+    df_gt = pd.read_csv('./python/security_related/datasets/UNSW-NB15/ground_truth/ground_truth.csv')
     # This csv file contains names of all the features
-    df_col = pd.read_csv('./python/security_related/datasets/UNSW-NB15/gt/NUSW-NB15_features.csv', encoding='ISO-8859-1')
-    # Making column names lower case, removing spaces
-    df_col['Name'] = df_col['Name'].apply(lambda x: x.strip().replace(' ', '').lower())
-    # Renaming our dataframe with proper column names
-    df_gt.columns = df_col['Name']
-
+   
 
     # Define a manual mapping for column names needs constant updating for new datasets
     column_mapping = {
@@ -260,68 +223,7 @@ def main(path):
     plt.show()
 
 
-#main("python/security_related/datasets/UNSW-NB15/eve_files")
+main("python/security_related/suricata/logs")
 
 
-        # Add to the total count
-        tot_true_pos += (true_pos)
-        tot_false_pos += (false_pos)
-        tot_false_neg += (false_neg)
-        tot_true_neg +=  (true_neg)
-        # Save the accuracy, recall, precision, and F1 score
-        if ((true_neg) + (true_pos) + (false_pos) + (false_neg)) != 0: list_acc.append(((true_pos) + (true_neg)) / ((true_neg) + (true_pos) + (false_pos) + (false_neg))) 
-        else: list_acc.append(0)
-        if ((true_pos) + (false_neg)) != 0: list_recall.append((true_pos) / ((true_pos) + (false_neg))) 
-        else: list_recall.append(0)
-        if ((true_pos) + (false_pos)) != 0: list_precision.append((true_pos) / ((true_pos) + (false_pos)))
-        else: list_precision.append(0)
-        if (list_precision[-1] + list_recall[-1]) != 0: list_f1.append(2 * (list_precision[-1] * list_recall[-1]) / (list_precision[-1] + list_recall[-1]))
-        else: list_f1.append(0)
-        # Progress bar
-        progress_bar(files.index(file_path)+1, ((files)))
-
-    print("=====================================")
-    # After for loop print values
-    print("Total True positives:", tot_true_pos)
-    print("Total False positives:", tot_false_pos)
-    print("Total False negatives:", tot_false_neg)
-    print("Total True negatives:", tot_true_neg)
-    # Calculate accuracy, precision, recall, F1 score
-    if (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) == 0:
-        accuracy = 0
-    else: accuracy = (tot_true_pos + tot_true_neg) / (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg)
-    if tot_true_pos + tot_false_neg == 0:
-        recall = 0
-    else: recall = tot_true_pos / (tot_true_pos + tot_false_neg)
-    if (tot_true_pos + tot_false_pos) == 0:
-        precision = 0
-    else: precision = tot_true_pos / (tot_true_pos + tot_false_pos)
-    if precision + recall == 0:
-        f1 = 0
-    else: f1 = 2 * (precision * recall) / (precision + recall)
-    print("Accuracy:", accuracy)
-    print("Recall:", recall)
-    print("Precision:", precision)
-    print("F1 score:", f1)
-
-    # Visualize with seaborn
-    cm = np.array([[tot_true_pos, tot_false_neg],[tot_false_pos, tot_true_neg]])
-    labels = ['True Pos','False Neg','False Pos','True Neg']
-    labels = np.asarray(labels).reshape(2,2)
-    sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-    plt.savefig('./img/sns.png')
-    plt.close()
-    plt.plot(list_acc, label='Accuracy')
-    plt.plot(list_recall, label='Recall')
-    plt.plot(list_precision, label='Precision')
-    plt.plot(list_f1, label='F1 score')
-    plt.legend()
-    plt.xlabel("File num")
-    plt.ylabel("Value")
-    plt.savefig('./img/plot.png')
-    plt.close()
-
-
-#main("python/security_related/suricata/logs/")
+ 
