@@ -93,146 +93,147 @@ def json_to_csv(file_path):
         return df_sur
 
 
-# Load all files in /eve_files/ directory
-files = glob.glob("./python/security_related/datasets/UNSW-NB15/eve_files/*/eve.json")
-print(files)
-tot_true_pos = 0
-tot_false_pos = 0
-tot_false_neg = 0
-tot_true_neg = 0
-df_gt = init_gt()
-for file_path in files:
-    
+def main(path):
+    # Load all files in /eve_files/ directory
+    files = glob.glob("./python/security_related/datasets/UNSW-NB15/eve_files/*/eve.json")
+    print(files)
+    tot_true_pos = 0
+    tot_false_pos = 0
+    tot_false_neg = 0
+    tot_true_neg = 0
+    df_gt = init_gt()
+    for file_path in files:
+        
 
-    df_sur = json_to_csv(file_path)
+        df_sur = json_to_csv(file_path)
 
-    
-
-
-    if 'flow.start' in df_sur.columns and 'flow.end' in df_sur.columns:
-            # Convert the flow start and end times to datetime objects
-            df_sur['flow.start'] = pd.to_datetime(df_sur['flow.start'])
-            df_sur['flow.end'] = pd.to_datetime(df_sur['flow.end'])
-            
-            # Calculate the duration as the difference between flow.end and flow.start
-            df_sur['dur'] = df_sur['flow.end'] - df_sur['flow.start']
+        
 
 
-
-    df_sur = df_sur[['src_ip', 'dest_ip','src_port','dest_port', 'proto',
-                    #'flow.bytes_toserver', 'flow.bytes_toclient','dur',
-                    'event_type',
-                    ]] 
-    
-
-
-    df_sur.dropna(inplace=True)
-    
-    # Make "proto" column lowercase in both dataframes
-    df_sur['proto'] = df_sur['proto'].str.lower()
-
-
-    # Drop
-    # If ip_src or ip_dst doest not start with a number, drop the row
-    df_sur = df_sur[df_sur['src_ip'].str.contains(r'^\d', na=False)]
-    df_sur = df_sur[df_sur['dest_ip'].str.contains(r'^\d', na=False)]
-    
-    # Save the shortened dataframes to CSV
-    #df_sur.to_csv("eve_short.csv", index=False)
-    
-
-    # Convert the port columns to integers
-    df_sur['src_port'] = df_sur['src_port'].astype(int)
-    df_sur['dest_port'] = df_sur['dest_port'].astype(int)
-    
-    # Merge the two dataframes on the common columns
-    df_merged = pd.merge(df_sur, df_gt, on=['src_ip', 'dest_ip','src_port','dest_port', 'proto'], how='inner', suffixes=('_suricata', '_gt'))
-
-    # Drop NaN rows
-    df_merged.dropna(inplace=True)
-    # save to csv
-    #df_merged.to_csv("merged.csv", index=False)
-    # Extract all column with "event_type" = alert also extract rows when "event_type" != alert but "label" = true
-    df_true_negative = df_merged[(df_merged["event_type"] != "alert") & (df_merged["label"] == False)] # Number of true negatives
-    df_false_negatives = df_merged[(df_merged["event_type"] != "alert") & (df_merged["label"] == True)] # Number of false negatives
-    df_alerts = df_merged[df_merged['event_type'] == "alert"]
-    df_merged = pd.concat([df_false_negatives, df_alerts], ignore_index=True)
+        if 'flow.start' in df_sur.columns and 'flow.end' in df_sur.columns:
+                # Convert the flow start and end times to datetime objects
+                df_sur['flow.start'] = pd.to_datetime(df_sur['flow.start'])
+                df_sur['flow.end'] = pd.to_datetime(df_sur['flow.end'])
+                
+                # Calculate the duration as the difference between flow.end and flow.start
+                df_sur['dur'] = df_sur['flow.end'] - df_sur['flow.start']
 
 
 
-    # print("df_merged:")
-    # print(df_merged.head(5))
+        df_sur = df_sur[['src_ip', 'dest_ip','src_port','dest_port', 'proto',
+                        #'flow.bytes_toserver', 'flow.bytes_toclient','dur',
+                        'event_type',
+                        ]] 
+        
 
-    true_pos = df_merged[(df_merged["event_type"] == "alert") & (df_merged["label"] == True)]
-    false_pos = df_merged[(df_merged["event_type"] == "alert") & (df_merged["label"] == False)]
-    
-    print("File name:", file_path)
-    print("Alerts:", len(df_alerts))
-    print("True positives:", len(true_pos))
-    print("False positives:", len(false_pos))
-    print("True negatives:", len(df_true_negative))
-    print("False negatives:", len(df_false_negatives))
-    # Add to the total count
-    tot_true_pos = tot_true_pos + len(true_pos)
-    tot_false_pos = tot_false_pos + len(false_pos)
-    tot_false_neg = tot_false_neg + len(df_false_negatives)
-    tot_true_neg = tot_true_neg + len(df_true_negative)
 
-    progress_bar(files.index(file_path)+1, (len(files)))
+        df_sur.dropna(inplace=True)
+        
+        # Make "proto" column lowercase in both dataframes
+        df_sur['proto'] = df_sur['proto'].str.lower()
 
-print("=====================================")
-# After for loop print values
-print("Total True positives:", tot_true_pos)
-print("Total False positives:", tot_false_pos)
-print("Total False negatives:", tot_false_neg)
-print("Total True negatives:", tot_true_neg)
-# Calculate accuracy, precision, recall, F1 score
-if (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) == 0:
-    accuracy = 0
-else: accuracy = (tot_true_pos + tot_true_neg) / (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg)
-if tot_true_pos + tot_false_neg == 0:
-    recall = 0
-else: recall = tot_true_pos / (tot_true_pos + tot_false_neg)
-if (tot_true_pos + tot_false_pos) == 0:
-    precision = 0
-else: precision = tot_true_pos / (tot_true_pos + tot_false_pos)
-if precision + recall == 0:
-    f1 = 0
-else: f1 = 2 * (precision * recall) / (precision + recall)
-print("Accuracy:", accuracy)
-print("Recall:", recall)
-print("Precision:", precision)
-print("F1 score:", f1)
 
-# Visualize with seaborn
-cm = np.array([[tot_true_pos, tot_false_neg],[tot_false_pos, tot_true_neg]])
-labels = ['True Pos','False Neg','False Pos','True Neg']
-labels = np.asarray(labels).reshape(2,2)
-sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
-plt.xlabel("Predicted")
-plt.ylabel("Actual")
-plt.show()
+        # Drop
+        # If ip_src or ip_dst doest not start with a number, drop the row
+        df_sur = df_sur[df_sur['src_ip'].str.contains(r'^\d', na=False)]
+        df_sur = df_sur[df_sur['dest_ip'].str.contains(r'^\d', na=False)]
+        
+        # Save the shortened dataframes to CSV
+        #df_sur.to_csv("eve_short.csv", index=False)
+        
 
-"""
-Necessary protocol fields for network traffic analysis include:
+        # Convert the port columns to integers
+        df_sur['src_port'] = df_sur['src_port'].astype(int)
+        df_sur['dest_port'] = df_sur['dest_port'].astype(int)
+        
+        # Merge the two dataframes on the common columns
+        df_merged = pd.merge(df_sur, df_gt, on=['src_ip', 'dest_ip','src_port','dest_port', 'proto'], how='inner', suffixes=('_suricata', '_gt'))
 
-Source and Destination IP/Port (to understand where traffic originates and is heading):
-'src_ip', 'dest_ip','src_port','dest_port'
-Transaction Protocol (to know which protocol triggered the alert).
-'proto', 'app_proto'
-Alert Signature and Category (to determine what caused the alert).
-'alert.signature', 'alert.category'
-Bytes and Packet Count (to assess the scale of the transaction).
-'flow.bytes_toserver', 'flow.bytes_toclient', 'flow.pkts_toserver', 'flow.pkts_toclient'
-State (to understand the connection state).
-'flow.state'
-Time-to-Live (TTL) (to analyze the network proximity of the source).
-i can only find ttl for dns (dns.ttl)
-Service (if applicable) (to understand the type of service being targeted).
-Alert Tags (for additional context and attack correlation).
-"""
+        # Drop NaN rows
+        df_merged.dropna(inplace=True)
+        # save to csv
+        #df_merged.to_csv("merged.csv", index=False)
+        # Extract all column with "event_type" = alert also extract rows when "event_type" != alert but "label" = true
+        df_true_negative = df_merged[(df_merged["event_type"] != "alert") & (df_merged["label"] == False)] # Number of true negatives
+        df_false_negatives = df_merged[(df_merged["event_type"] != "alert") & (df_merged["label"] == True)] # Number of false negatives
+        df_alerts = df_merged[df_merged['event_type'] == "alert"]
+        df_merged = pd.concat([df_false_negatives, df_alerts], ignore_index=True)
 
-# Step 1: Use the lowest amount of column necessary for correctly classifying all ground truth alerts as intrusion
-# Step 2: Compare the alerts with the ground truth to generate a confusion matrix
-# Step 3: Calculate the accuracy of the IDS
-# Step 4: Plot all security related measurements
+
+
+        # print("df_merged:")
+        # print(df_merged.head(5))
+
+        true_pos = df_merged[(df_merged["event_type"] == "alert") & (df_merged["label"] == True)]
+        false_pos = df_merged[(df_merged["event_type"] == "alert") & (df_merged["label"] == False)]
+        
+        print("File name:", file_path)
+        print("Alerts:", len(df_alerts))
+        print("True positives:", len(true_pos))
+        print("False positives:", len(false_pos))
+        print("True negatives:", len(df_true_negative))
+        print("False negatives:", len(df_false_negatives))
+        # Add to the total count
+        tot_true_pos = tot_true_pos + len(true_pos)
+        tot_false_pos = tot_false_pos + len(false_pos)
+        tot_false_neg = tot_false_neg + len(df_false_negatives)
+        tot_true_neg = tot_true_neg + len(df_true_negative)
+
+        progress_bar(files.index(file_path)+1, (len(files)))
+
+    print("=====================================")
+    # After for loop print values
+    print("Total True positives:", tot_true_pos)
+    print("Total False positives:", tot_false_pos)
+    print("Total False negatives:", tot_false_neg)
+    print("Total True negatives:", tot_true_neg)
+    # Calculate accuracy, precision, recall, F1 score
+    if (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) == 0:
+        accuracy = 0
+    else: accuracy = (tot_true_pos + tot_true_neg) / (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg)
+    if tot_true_pos + tot_false_neg == 0:
+        recall = 0
+    else: recall = tot_true_pos / (tot_true_pos + tot_false_neg)
+    if (tot_true_pos + tot_false_pos) == 0:
+        precision = 0
+    else: precision = tot_true_pos / (tot_true_pos + tot_false_pos)
+    if precision + recall == 0:
+        f1 = 0
+    else: f1 = 2 * (precision * recall) / (precision + recall)
+    print("Accuracy:", accuracy)
+    print("Recall:", recall)
+    print("Precision:", precision)
+    print("F1 score:", f1)
+
+    # Visualize with seaborn
+    cm = np.array([[tot_true_pos, tot_false_neg],[tot_false_pos, tot_true_neg]])
+    labels = ['True Pos','False Neg','False Pos','True Neg']
+    labels = np.asarray(labels).reshape(2,2)
+    sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.show()
+
+    """
+    Necessary protocol fields for network traffic analysis include:
+
+    Source and Destination IP/Port (to understand where traffic originates and is heading):
+    'src_ip', 'dest_ip','src_port','dest_port'
+    Transaction Protocol (to know which protocol triggered the alert).
+    'proto', 'app_proto'
+    Alert Signature and Category (to determine what caused the alert).
+    'alert.signature', 'alert.category'
+    Bytes and Packet Count (to assess the scale of the transaction).
+    'flow.bytes_toserver', 'flow.bytes_toclient', 'flow.pkts_toserver', 'flow.pkts_toclient'
+    State (to understand the connection state).
+    'flow.state'
+    Time-to-Live (TTL) (to analyze the network proximity of the source).
+    i can only find ttl for dns (dns.ttl)
+    Service (if applicable) (to understand the type of service being targeted).
+    Alert Tags (for additional context and attack correlation).
+    """
+
+    # Step 1: Use the lowest amount of column necessary for correctly classifying all ground truth alerts as intrusion
+    # Step 2: Compare the alerts with the ground truth to generate a confusion matrix
+    # Step 3: Calculate the accuracy of the IDS
+    # Step 4: Plot all security related measurements
