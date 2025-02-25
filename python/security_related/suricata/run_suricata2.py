@@ -29,9 +29,12 @@ if dataset == "1": # UNSW-NB15
     
     files = glob.glob(file_path)
     for x,file in enumerate(files):
-        path_to_output = os.path.join("python", "security_related", "datasets", dataset, "eve_files", str(x+1))
+        
+        path_to_output = os.path.join("python", "security_related", "suricata", "logs", str(x+1))
         print(file)
+        os.mkdir(path_to_output)
         run_suricata(dataset,file,(x+1),path_to_output)
+    output_path = os.path.join("python", "security_related", "suricata", "logs")
     main(path_to_output)
 
 #/mnt/c/Users/It/Downloads/

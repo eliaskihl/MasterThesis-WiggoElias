@@ -83,8 +83,8 @@ def json_to_csv(file_path):
 
 
 def main(path):
-    # Load all files in /eve_files/ directory
-    file_path = path + "/eve.json"
+    # Load all files in /logs/ directory
+    file_path = path + "/*/eve.json" 
     files = glob.glob(file_path)
     print(files)
     idx = range(0,len(files)-1)
@@ -210,7 +210,7 @@ def main(path):
     sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
-    plt.savefig('./sns.png')
+    plt.savefig('./img/sns.png')
     plt.close()
     plt.plot(list_acc, label='Accuracy')
     plt.plot(list_recall, label='Recall')
@@ -219,8 +219,8 @@ def main(path):
     plt.legend()
     plt.xlabel("File num")
     plt.ylabel("Value")
-    plt.savefig('./plot.png')
+    plt.savefig('./img/plot.png')
     plt.close()
 
 
-main("python/security_related/suricata/logs/")
+#main("python/security_related/suricata/logs/1")
