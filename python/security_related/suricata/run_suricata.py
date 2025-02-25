@@ -1,13 +1,16 @@
 import subprocess
 import argparse
 import os
+
 from tabulate import tabulate
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from TII_SSRC_23 import process_tii_ssrc_23_logs
 from UNSW_NB15 import process_unsw_nb15_logs
 
+
 def run_dataset(dataset, pcap_path):
     """Run Suricata on a specified dataset and either a single PCAP file or all PCAP files in a folder."""
+
     dataset_paths = {
         "TII-SSRC-23": "../datasets/TII-SSRC-23",
         "UNSW-NB15": "../datasets/UNSW-NB15"
