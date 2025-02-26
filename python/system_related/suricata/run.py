@@ -29,19 +29,19 @@ def log_performance(log_file, process_name,tcp_proc):
     print("Logging complete")
 
 def main(loop, speed):
-    filepath = "python/sys_perf/suricata/logs/ids_performance_log.csv"
+    filepath = "python/system_related/suricata/logs/ids_performance_log.csv"
     # Start Suricata as subprocess
     print("Starting suricata...")
     time.sleep(1)
-    temp = open("python/sys_perf/suricata/tmp/temp_suricata.log", "w")
-    err = open("python/sys_perf/suricata/tmp/err_suricata.log", "w")
+    temp = open("python/system_related/suricata/tmp/temp_suricata.log", "w")
+    err = open("python/system_related/suricata/tmp/err_suricata.log", "w")
     suricata_proc = subprocess.Popen(["sudo", "suricata", "-i", "lo"], stdout=temp, stderr=err)  
     time.sleep(2)
     # Start tcp replay
     print("Starting tcp replay...")
     time.sleep(1)
-    temp = open("python/sys_perf/suricata/tmp/temp_tcpreplay.log", "w")
-    err = open("python/sys_perf/suricata/tmp/err_tcpreplay.log", "w")
+    temp = open("python/system_related/suricata/tmp/temp_tcpreplay.log", "w")
+    err = open("python/system_related/suricata/tmp/err_tcpreplay.log", "w")
     tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-i", "lo", f"--loop={loop}", f"--mbps={speed}", "/mnt/c/users/it/downloads/text.pcap"],stdout=temp, stderr=err)
     # Log performance in seperate thread while Suricata is running and until tcpreplay is done
     monitor_thread = Thread(target=log_performance, args=(filepath, "suricata", tcpreplay_proc))

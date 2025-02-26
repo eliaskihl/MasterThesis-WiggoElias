@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 def main(ids_performance_log, ids_name):
-    df = pd.read_csv("python/sys_perf/suricata/logs/ids_performance_log.csv")
+    df = pd.read_csv("python/system_related/suricata/logs/ids_performance_log.csv")
     print(df)
 
     # Extract the time, CPU usage, and memory usage columns
@@ -17,8 +17,8 @@ def main(ids_performance_log, ids_name):
     plt.title(f"{ids_name} System Performance")
     plt.legend()
     # save img as png
-    plt.savefig(f"python/sys_perf/suricata/logs/{ids_name}_performance.png")
+    plt.savefig(f"python/system_related/suricata/logs/{ids_name}_performance.png")
 
 
 
-main("python/sys_perf/suricata/logs/ids_performance_log.csv", "Suricata")
+main("python/system_related/suricata/logs/ids_performance_log.csv", "Suricata")

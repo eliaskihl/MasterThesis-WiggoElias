@@ -1,0 +1,2 @@
+Warning in sendpacket.c:sendpacket_open_pf() line 953:
+Unsupported physical layer type 0x0304 on lo.  Maybe it works, maybe it won't.  See tickets #123/318

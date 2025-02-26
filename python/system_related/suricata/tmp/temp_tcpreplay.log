@@ -1,0 +1,9 @@
+Actual: 1781600 packets (208484900 bytes) sent in 28.93 seconds
+Rated: 7205275.0 Bps, 57.64 Mbps, 61572.41 pps
+Flows: 169 flows, 5.84 fps, 1749500 unique flow packets, 32100 unique non-flow packets
+Statistics for network device: lo
+	Successful packets:        1781600
+	Failed packets:            0
+	Truncated packets:         0
+	Retried packets (ENOBUFS): 0
+	Retried packets (EAGAIN):  0
