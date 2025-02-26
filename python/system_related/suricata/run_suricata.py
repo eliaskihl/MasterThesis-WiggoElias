@@ -4,41 +4,47 @@ import subprocess
 import time
 import psutil
 import csv
+import sys
 from threading import Thread
+
+def print_log(message):
+    print(message)
+    sys.stdout.flush()
 
 def log_performance(log_file, process_name,tcp_proc):
     # Logs CPU & memory usage of the IDS process every 5 seconds 
     with open(log_file, "w", newline="") as f:
         # Writes to csv
         writer = csv.writer(f)
-        writer.writerow(["Time", "CPU_Usage (%)", "Memory_Usage (MB)"])  # CSV header
+        writer.writerow(["Time", "CPU_Usage (%)", "Memory_Usage (%)"])  # CSV header
 
         while tcp_proc.poll() is None:
             # Find the process by name
             for proc in psutil.process_iter(attrs=["pid", "name", "cpu_percent", "memory_info"]):
                 if process_name in proc.info["name"].lower():
                     cpu_usage = proc.info["cpu_percent"]
-                    mem_usage = proc.info["memory_info"].rss / (1024 * 1024)  # Convert to MB
-
+                    rss_mem = proc.info["memory_info"].rss # procent
+                    # Get the total system memory (in bytes)
+                    tot_mem = psutil.virtual_memory().total
+                    memory_percentage = (rss_mem / tot_mem) * 100
                     # Log the data
-                    writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), cpu_usage, mem_usage])
+                    writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), cpu_usage, memory_percentage])
                     f.flush()  # Ensure immediate write
-                    # Print data to console
                     #print(f"Time: {time.strftime('%Y-%m-%d %H:%M:%S')}, CPU: {cpu_usage}%, Memory: {mem_usage}MB")
             time.sleep(5)  # Log every 5 seconds
-    print("Logging complete")
+    print_log("Logging complete")
 
 def main(loop, speed):
     filepath = "python/system_related/suricata/logs/ids_performance_log.csv"
     # Start Suricata as subprocess
-    print("Starting suricata...")
+    print_log("Starting suricata...")
     time.sleep(1)
     temp = open("python/system_related/suricata/tmp/temp_suricata.log", "w")
     err = open("python/system_related/suricata/tmp/err_suricata.log", "w")
     suricata_proc = subprocess.Popen(["sudo", "suricata", "-i", "lo"], stdout=temp, stderr=err)  
     time.sleep(2)
     # Start tcp replay
-    print("Starting tcp replay...")
+    print_log("Starting tcp replay...")
     time.sleep(1)
     temp = open("python/system_related/suricata/tmp/temp_tcpreplay.log", "w")
     err = open("python/system_related/suricata/tmp/err_tcpreplay.log", "w")
@@ -48,20 +54,20 @@ def main(loop, speed):
     monitor_thread.start()
     time.sleep(1)
     # Wait for Suricata to exit (if manually stopped)
-    print("Wait for TCP replay to finish")
+    print_log("Wait for TCP replay to finish")
     tcpreplay_proc.wait()
     
     time.sleep(2)
-    print("Wait for suricata to finish")
+    print_log("Wait for suricata to finish")
     suricata_proc.wait()
     time.sleep(1)
-    print("Termating suricata..")
+    print_log("Termating suricata..")
     suricata_proc.terminate()
     
     # End / join thread
-    print("Terminating monitor thread")
+    print_log("Terminating monitor thread")
     monitor_thread.join()
 
 
 
-main(100,100)
+main(100,100000)
