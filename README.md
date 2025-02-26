@@ -3,7 +3,8 @@
 ### Step 1
 Have a folder with pcap files for a dataset that is given in the program (UNSW-NB15, TI-SSRC-23, etc)
 ### Step 2
-Select which IDS to use
+Select which IDS/ to use
+Run from the source directory with 'python run.py *ids* *dataset* *pcap-file or folder*
 ### Step 3
 When running an IDS it will ask you to give the path of the pcap folder
 ### Step 4
