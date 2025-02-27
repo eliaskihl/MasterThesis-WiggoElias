@@ -1,0 +1,2 @@
+i: suricata: This is Suricata version 7.0.3 RELEASE running in SYSTEM mode
+W: ioctl: lo: failed to set SIOCETHTOOL ioctl: Operation not supported
