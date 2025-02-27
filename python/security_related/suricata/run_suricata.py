@@ -9,7 +9,7 @@ from UNSW_NB15 import process_unsw_nb15_logs
 
 
 def run_dataset(dataset, pcap_path):
-    """Run Suricata on a specified dataset and either a single PCAP file or all PCAP files in a folder."""
+
 
     dataset_paths = {
         "TII-SSRC-23": "../datasets/TII-SSRC-23",
@@ -21,9 +21,8 @@ def run_dataset(dataset, pcap_path):
     
     full_path = os.path.join(dataset_paths[dataset], "pcap", pcap_path)
     
-    # Check if the given path is a file or a folder
     if os.path.isfile(full_path):
-        pcap_files = [full_path]  # Process a single file
+        pcap_files = [full_path]  
     elif os.path.isdir(full_path):
         pcap_files = [os.path.join(full_path, f) for f in os.listdir(full_path) if f.endswith(".pcap")]
     else:
@@ -41,7 +40,7 @@ def run_dataset(dataset, pcap_path):
     pcap_file = pcap_files[0]
     print(f"Processing: {pcap_file}")
 
-    cmd = ["sudo", "suricata", "-r", pcap_file, "-l", "./logs", "-v"]
+    cmd = ["sudo", "suricata", "-r", pcap_file, "-l", "./logs"]
     process = subprocess.Popen(cmd)
     process.wait()
 
@@ -98,8 +97,6 @@ def main():
     for file in files_to_delete:
         if os.path.exists(file):  
             os.remove(file)
-        else:
-            print(f"File not found: {file}")
     
 if __name__ == "__main__":
     main()
