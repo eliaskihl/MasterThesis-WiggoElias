@@ -45,7 +45,7 @@ def log_performance(log_file, process_name,tcp_proc):
 def run(ids_name, loop, speed):
     # TODO: Add a sudo su command for root access
 
-    filepath = f"python/system_related/{ids_name}/logs/ids_performance_log_{speed}.csv"
+    filepath = f"python/system_related/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
     # Start {ids_name} as subprocess
     print_log(f"Starting {ids_name}...")
     time.sleep(1)
@@ -53,11 +53,11 @@ def run(ids_name, loop, speed):
     err = open(f"python/system_related/{ids_name}/tmp/err_{ids_name}.log", "w")
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
     if ids_name == "suricata":
-        ids_proc = subprocess.Popen(["sudo", f"{ids_name}", "-i", "eth0"], stdout=temp, stderr=err) 
-    elif ids_name == "snort":
-        ids_proc = subprocess.Popen(["sudo", f"{ids_name}", "-v", "-i", "eth0"], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(["sudo", "suricata", "-i", "eth0"], stdout=temp, stderr=err) 
+    elif ids_name == "snort3":
+        ids_proc = subprocess.Popen(["sudo", "/usr/local/snort/bin/snort", "-c", "python/system_related/snort3/config/snort.lua", "-i", "eth0", "-l", "./python/system_related/snort3/logs"], stdout=temp, stderr=err)
     elif ids_name == "zeek":
-        ids_proc = subprocess.Popen(["sudo", f"{ids_name}", "-i", "eth0", "-C", "zeek_init.cfg"], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(["sudo", "zeek", "-i", "eth0", "-C", "zeek_init.cfg"], stdout=temp, stderr=err)
     time.sleep(2)
     # Start tcp replay
     print_log("Starting tcp replay...")
@@ -66,21 +66,24 @@ def run(ids_name, loop, speed):
     err = open(f"python/system_related/{ids_name}/tmp/err_tcpreplay.log", "w")
     tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-i", "eth0", f"--loop={loop}", f"--mbps={speed}", "python/system_related/pcap/bigFlows.pcap"],stdout=temp, stderr=err)
     # Log performance in seperate thread while {ids_name} is running and until tcpreplay is done
-    monitor_thread = Thread(target=log_performance, args=(filepath, "{ids_name}", tcpreplay_proc))
+    monitor_thread = Thread(target=log_performance, args=(filepath, f"{ids_name}", tcpreplay_proc))
     monitor_thread.start()
     time.sleep(1)
-    # Wait for {ids_name} to exit (if manually stopped)
+    # Wait / Terminate tcp replay
     print_log("Wait for TCP replay to finish")
     tcpreplay_proc.wait()
     time.sleep(1)
     print_log(f"Terminating tcpreplay..")
     tcpreplay_proc.terminate()
     time.sleep(2)
-    print_log(f"Wait for {ids_name} to finish")
-    ids_proc.wait()
-    time.sleep(1)
+    # Wait / Terminate ids_proc
     print_log(f"Termating {ids_name}..")
     ids_proc.terminate()
+    time.sleep(1)
+    print_log(f"Wait for {ids_name} to finish")
+    ids_proc.wait()
+    
+    
     
     # End / join thread
     print_log("Terminating monitor thread")
@@ -89,10 +92,12 @@ def run(ids_name, loop, speed):
 
 
 def main(ids_name):
+    run(ids_name,1,100)
+    exit(0)
     for i in range(10, 150, 20):
         print("Running with speed:", i)
         run(1,i)
     visualize(f"{ids_name}")
     
     
-main()
+main("suricata")

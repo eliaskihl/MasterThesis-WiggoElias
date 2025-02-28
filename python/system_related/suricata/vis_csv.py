@@ -97,4 +97,3 @@ def visualize(ids_name):
 ta ut average for varje run (speed) och plotta en barplot med speed som x-axel och cpu och mem som y-axel
 """
 
-visualize("Suricata")

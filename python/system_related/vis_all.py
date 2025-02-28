@@ -11,60 +11,69 @@ def visualize():
     cpus = []
     mems = []
     names = []
-    for name in ["suricata","snort"]:
-        sur_files = glob.glob(f"python/system_related/{name}/logs/ids_performance_log*.csv")
+    # create empty dataframe
+    dfs = {}
+    for name in ["suricata","snort3"]:
+        sur_files = glob.glob(f"python/system_related/{name}/perf_files/ids_performance_log*.csv")
+       
         for file in sur_files:
-            speeds.append(int(file.split("_")[-1].split(".")[0]))
+            print(file)
+            speeds.append((int(file.split("_")[-1].split(".")[0])))
             cpu, mem = calc_mean(file)
             cpus.append(cpu)
-            mems.append(mem)
-            names.append("{name}")
+            mems.append(mem)  
+        dfs[name] = pd.DataFrame({"Speed":speeds, "CPU":cpus, "Memory":mems})
+        # Clear
+        speeds = []
+        cpus = []
+        mems = []
 
-        # Create dataframe
-        df = pd.DataFrame({
-            "Speed": speeds,
-            "CPU": cpus,
-            "Memory": mems,
-            "Name": names
-        })
-    # order dataframe by speed
+    df_sur = dfs["suricata"]
+    df_snort = dfs["snort3"]
+    print(df_sur)
+    print(df_snort)
+
+    # Merge based on "Speed"
+    df = pd.merge(df_sur, df_snort, on="Speed", suffixes=('_suricata', '_snort3'))
+    print(df)
+
     
-    
-    df_sur = df[df["Name"] == "suricata"]
-    df_snort = df[df["Name"] == "snort"]
-    df_sur = df.sort_values(by="Speed")    
-    df_snort = df.sort_values(by="Speed")    
-    indices = np.arange(len(df["Speed"]))
-    bar_width = 0.35
-    if df_snort["Speed"] != df_sur["Speed"]:
-        print("Speeds are not equal, exit...")
-        exit(0)
-    # Plot CPU usage bars
-    plt.bar(indices - bar_width / 2, df_sur["CPU"], width=bar_width, label=name)
+    # df_sur = df[df["Name"] == "suricata"]
+    # df_snort = df[df["Name"] == "snort3"]
+    # # Plot CPU and Memory usage bars
+    # fig, axes = plt.subplots(2, 1, figsize=(10, 5))
+    # x = np.arange(len(df['Speed']))
+    # # CPU Usage Bar Plot
+    # axes[0].bar(df['Speed'].astype(str), df_sur['CPU'], color='orange', width=0.8,label="Suricata")
+    # axes[0].bar(df['Speed'].astype(str), df_snort['CPU'], color='blue', width=0.8, label="Snort3")
+    # axes[0].set_title('CPU Usage')
+    # axes[0].set_ylabel('CPU (%)')
+    # axes[0].set_xticks(x)
+    # axes[0].set_xticklabels(df['Speed'])
+    # axes[0].legend()
+    # # Memory Usage Bar Plot
+    # axes[1].bar(df['Speed'].astype(str), df_snort['Memory'], color='blue', width=0.8,label="Snort3")
+    # axes[1].bar(df['Speed'].astype(str), df_sur['Memory'], color='orange', width=0.8,label="Suricata")
+    # axes[1].legend()
+    # axes[1].set_title('Memory Usage')
+    # axes[1].set_ylabel('Memory (%)')
+    # axes[1].set_xticklabels(df['Speed'].astype(str))
+    # # Adjust layout for closer bars
+    # plt.subplots_adjust(wspace=0.1)
+    # # Show the plots
+    # plt.tight_layout()
+    width,height = 8,6
+    df.plot(x="Speed", y=["CPU_suricata", "CPU_snort3"], kind="bar", figsize=(width,height))
+    plt.title("CPU Usage")
+    plt.ylabel("CPU (%)")
+    print("Saving plot CPU")
+    plt.savefig(f"img/cpu.png")
 
-    # Plot memory usage bars
-    plt.bar(indices + bar_width / 2, df_snort["CPU"], width=bar_width, label=name)
-    plt.xlabel("Speed (Mbit/s)")
-    plt.ylabel("CPU Usage (%)")
-    plt.xticks(indices, df["Speed"], rotation=90)
-    plt.title("System Performance")
-    plt.legend()
-    # Save image
-    print("Save image as png")
-    plt.savefig(f"img/performane.png")
-    # Plot CPU usage bars
-    plt.bar(indices - bar_width / 2, df_sur["Memory"], width=bar_width, label="Suricata")
+    df.plot(x="Speed", y=["Memory_suricata", "Memory_snort3"], kind="bar", figsize=(width,height))
+    plt.title("Memory Usage")
+    plt.ylabel("Memory (%)")
+    print("Saving plot Memory")
+    plt.savefig(f"img/memory.png")
 
-    # Plot memory usage bars
-    plt.bar(indices + bar_width / 2, df_snort["Memory"], width=bar_width, label="Snort")
-    plt.xlabel("Speed (Mbit/s)")
-    plt.ylabel("CPU Usage (%)")
-    plt.xticks(indices, df["Speed"], rotation=90)
-    plt.title("System Performance")
-    plt.legend()
-    # Save image
-    print("Save image as png")
-    plt.savefig(f"img/performane.png")
-""" 
-ta ut average for varje run (speed) och plotta en barplot med speed som x-axel och cpu och mem som y-axel
-"""
+
+visualize()
