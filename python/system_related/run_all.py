@@ -6,7 +6,7 @@ import psutil
 import csv
 import sys
 from threading import Thread
-from suricata.vis_csv import visualize
+from vis_all import visualize
 
 def print_log(message):
     print(message)
@@ -43,21 +43,20 @@ def log_performance(log_file, process_name,tcp_proc):
     print_log("Logging complete")
 
 def run(ids_name, loop, speed):
-    # TODO: Add a sudo su command for root access
-
+    
     filepath = f"python/system_related/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
     # Start {ids_name} as subprocess
     print_log(f"Starting {ids_name}...")
     time.sleep(1)
-    temp = open(f"python/system_related/{ids_name}/tmp/temp_{ids_name}.log", "w")
-    err = open(f"python/system_related/{ids_name}/tmp/err_{ids_name}.log", "w")
+    temp = open(f"python/system_related/{ids_name}/tmp/temp.log", "w")
+    err = open(f"python/system_related/{ids_name}/tmp/err.log", "w")
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
     if ids_name == "suricata":
         ids_proc = subprocess.Popen(["sudo", "suricata", "-i", "eth0"], stdout=temp, stderr=err) 
     elif ids_name == "snort3":
         ids_proc = subprocess.Popen(["sudo", "/usr/local/snort/bin/snort", "-c", "python/system_related/snort3/config/snort.lua", "-i", "eth0", "-l", "./python/system_related/snort3/logs"], stdout=temp, stderr=err)
     elif ids_name == "zeek":
-        ids_proc = subprocess.Popen(["sudo", "zeek", "-i", "eth0", "-C", "zeek_init.cfg"], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(["docker", "run", "--rm", "--net=host", "--name", "zeek-live", "zeek/zeek", "zeek", "-i", "eth0",], stdout=temp, stderr=err)
     time.sleep(2)
     # Start tcp replay
     print_log("Starting tcp replay...")
@@ -91,13 +90,24 @@ def run(ids_name, loop, speed):
 
 
 
-def main(ids_name):
-    run(ids_name,1,100)
-    exit(0)
-    for i in range(10, 150, 20):
-        print("Running with speed:", i)
-        run(1,i)
-    visualize(f"{ids_name}")
+def main(first, last, step, loop):
+    # TODO: Add a sudo su command for root access
+    # root = subprocess.Popen(["sudo", "su"])
+    # root.terminate()
+    # root.wait()
+    for ids_name in ["suricata","snort3","zeek"]:
+        for i in range(first, last, step):
+            print("Running with speed:", i)
+            run(ids_name,loop,i)
     
-    
-main("suricata")
+    visualize()
+
+"""
+Arguments for main():
+First - first mbits/s speed index
+Last - last mbits/s speed index
+Step - mbits/s speed index increase per iteration
+Loop - number of times to loop the pcap file
+"""
+
+main(10,250,20,1)

@@ -1,6 +1,0 @@
-E: hugepages: unable to open /sys/devices/system/node/
-E: hugepages: failed to obtain number of NUMA nodes in the system
-E: af-packet: lo: Frame size bigger than block size
-E: af-packet: lo: ring parameters are incorrect. Please file a bug report
-E: af-packet: lo: failed to init socket for interface
-E: threads: thread "W#01-lo" failed to start: flags 0423
