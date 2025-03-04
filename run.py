@@ -8,6 +8,10 @@ TOOLS = {
         "dir": "python/security_related/suricata",
         "script": "run_suricata.py",
     },
+        "snort3": {
+        "dir": "python/security_related/snort3",
+        "script": "run_snort3.py",
+    },
         "zeek": {
         "dir": "python/security_related/zeek",
         "script": "run_zeek.py",

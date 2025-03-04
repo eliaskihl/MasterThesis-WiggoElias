@@ -5,6 +5,9 @@ from tabulate import tabulate
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from TII_SSRC_23 import process_tii_ssrc_23_logs
 from UNSW_NB15 import process_unsw_nb15_logs
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
 
 def run_dataset(dataset, pcap_path):
 
@@ -80,6 +83,30 @@ def print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_
     print("=" * 40)
     print(tabulate(table, headers=["Metric", "Value"], tablefmt="grid"))
 
+        # Initialize lists to store metrics
+    list_acc, list_recall, list_precision, list_f1 = [], [], [], []
+
+    list_acc.append(accuracy)
+    list_recall.append(recall)
+    list_precision.append(precision)
+    list_f1.append(f1)
+    
+    # Visualize with seaborn
+    cm = np.array([[tot_true_pos, tot_false_neg],[tot_false_pos, tot_true_neg]])
+    labels = ['True Pos','False Neg','False Pos','True Neg']
+    labels = np.asarray(labels).reshape(2,2)
+    sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.show()
+    # plt.plot(list_acc, label='Accuracy')
+    # plt.plot(list_recall, label='Recall')
+    # plt.plot(list_precision, label='Precision')
+    # plt.plot(list_f1, label='F1 score')
+    # plt.legend()
+    # plt.xlabel("File num")
+    # plt.ylabel("Value")
+    # plt.show()
 
 def main():
     parser = argparse.ArgumentParser(description="Run Suricata on a specified dataset and PCAP file/folder.")

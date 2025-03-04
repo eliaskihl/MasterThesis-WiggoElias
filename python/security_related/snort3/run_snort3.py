@@ -112,7 +112,7 @@ def main():
     run_dataset(args.dataset, args.pcap_path)
 
     # Delete files afterwards
-    files_to_delete = ["./logs/alert.csv", "./logs/snort.log", "./logs/merged.pcap"]
+    files_to_delete = ["./logs/alert_csv.txt"]
     for file in files_to_delete:
         if os.path.exists(file):  
             os.remove(file)
