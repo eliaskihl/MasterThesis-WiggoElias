@@ -1,6 +1,6 @@
-Actual: 791615 packets (355417784 bytes) sent in 107.04 seconds
-Rated: 3320342.0 Bps, 26.56 Mbps, 7395.33 pps
-Flows: 40467 flows, 378.04 fps, 790934 unique flow packets, 436 unique non-flow packets
+Actual: 791615 packets (355417784 bytes) sent in 101.39 seconds
+Rated: 3505383.2 Bps, 28.04 Mbps, 7807.47 pps
+Flows: 40467 flows, 399.11 fps, 790934 unique flow packets, 436 unique non-flow packets
 Statistics for network device: eth0
 	Successful packets:        791615
 	Failed packets:            0

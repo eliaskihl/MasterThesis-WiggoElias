@@ -5,6 +5,8 @@ import time
 import psutil
 import csv
 import sys
+import re
+import os
 from threading import Thread
 from vis_all import visualize
 
@@ -47,17 +49,19 @@ def run(ids_name, loop, speed):
     filepath = f"python/system_related/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
     # Start {ids_name} as subprocess
     print_log(f"Starting {ids_name}...")
-    time.sleep(1)
+    
     temp = open(f"python/system_related/{ids_name}/tmp/temp.log", "w")
     err = open(f"python/system_related/{ids_name}/tmp/err.log", "w")
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
     if ids_name == "suricata":
-        ids_proc = subprocess.Popen(["sudo", "suricata", "-i", "eth0"], stdout=temp, stderr=err) 
-    elif ids_name == "snort3":
+        ids_proc = subprocess.Popen(["sudo", "suricata", "-i", "eth0", "-l", "./python/system_related/suricata/logs"], stdout=temp, stderr=err) 
+    elif ids_name == "snort3": # TODO Change the /usr/local/snort/bin/snort to snort?
         ids_proc = subprocess.Popen(["sudo", "/usr/local/snort/bin/snort", "-c", "python/system_related/snort3/config/snort.lua", "-i", "eth0", "-l", "./python/system_related/snort3/logs"], stdout=temp, stderr=err)
-    elif ids_name == "zeek":
-        ids_proc = subprocess.Popen(["docker", "run", "--rm", "--net=host", "--name", "zeek-live", "zeek/zeek", "zeek", "-i", "eth0",], stdout=temp, stderr=err)
-    time.sleep(2)
+    elif ids_name == "zeek": # TODO Change the /usr/local/zeek/bin/zeekctl command to zeekctl?
+        ids_proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeek", "-i", "eth0"], stdout=temp, stderr=err)
+        #ids_proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeekctl", "start"], stdout=temp, stderr=err)
+        #ids_proc = subprocess.Popen(["docker", "run", "--rm", "--net=host", "--name", "zeek-live", "zeek/zeek", "zeek", "-i", "eth0",], stdout=temp, stderr=err)
+    time.sleep(40) # Give the process 40 seconds to intitate.
     # Start tcp replay
     print_log("Starting tcp replay...")
     time.sleep(1)
@@ -82,20 +86,80 @@ def run(ids_name, loop, speed):
     print_log(f"Wait for {ids_name} to finish")
     ids_proc.wait()
     
-    
-    
     # End / join thread
     print_log("Terminating monitor thread")
     monitor_thread.join()
 
+    # Extract drop rate from ids
+    if ids_name == "suricata":
+        drop_rate = extract_drop_rate_suricata()
+    elif ids_name == "snort3":
+        drop_rate = extract_drop_rate_snort()
+    elif ids_name == "zeek":
+        drop_rate = extract_drop_rate_zeek()
+    # Write drop rate to file
+    with open(f"python/system_related/{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
+        f.write(str(drop_rate))
+def extract_drop_rate_zeek():
+    log = "python/system_related/zeek/tmp/err.log"
+    with open(log, "r") as file:
+        for line in file:
+            match = re.search(r"(\d+) packets received on interface (\S+), (\d+) \(([\d.]+)%\) dropped", line)
+            if match:
+                total_packets = int(match.group(1))
+                dropped_packets = int(match.group(3))
+                drop_rate = float(match.group(4))
+                
+                print(f"Total Packets: {total_packets}")
+                print(f"Dropped Packets: {dropped_packets}")
+                print(f"Drop Rate: {drop_rate}%")
+                return drop_rate
+    
 
+def extract_drop_rate_snort():
+    log = "python/system_related/snort3/tmp/temp.log"
+    # Find line with "dropped" and "received"
+    with open(log, "r") as file:
+        for line in file:
+            
+            rec_match = re.search(r"\s*received:\s*(\d+)\s*", line)
+            drop_match = re.search(r"\s*dropped:\s*(\d+)\s*", line)
+            
+            if rec_match:
+                total_packets = int(rec_match.group(1))
+            if drop_match:
+                dropped_packets = int(drop_match.group(1))
+                if total_packets > 0:
+                    drop_rate = (dropped_packets / total_packets) * 100
+                else: 
+                    drop_rate = 0.0
+                print(f"Total Packets: {total_packets}")
+                print(f"Dropped Packets: {dropped_packets}")
+                print(f"Drop Rate: {drop_rate}%")
+                return drop_rate
+
+def extract_drop_rate_suricata():
+    log = "python/system_related/suricata/tmp/temp.log"
+    with open(log, "r") as file:
+        for line in file:
+            match = re.search(r"i: device: (\S+): packets: (\d+), drops: (\d+) \(([\d.]+)%\), invalid chksum: (\d+)", line)
+            if match:
+                total_packets = int(match.group(2))   
+                dropped_packets = int(match.group(3))    
+                drop_rate = float(match.group(4))       
+                
+                print(f"Total Packets: {total_packets}")
+                print(f"Dropped Packets: {dropped_packets}")
+                print(f"Drop Rate: {drop_rate}%")
+                return drop_rate
+    
 
 def main(first, last, step, loop):
     # TODO: Add a sudo su command for root access
     # root = subprocess.Popen(["sudo", "su"])
     # root.terminate()
     # root.wait()
-    for ids_name in ["suricata","snort3","zeek"]:
+    for ids_name in ["snort3","suricata","zeek"]:
         for i in range(first, last, step):
             print("Running with speed:", i)
             run(ids_name,loop,i)
@@ -110,4 +174,4 @@ Step - mbits/s speed index increase per iteration
 Loop - number of times to loop the pcap file
 """
 
-main(10,250,20,1)
+main(100,200,100,1)
