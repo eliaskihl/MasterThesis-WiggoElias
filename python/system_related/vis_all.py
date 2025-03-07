@@ -13,8 +13,9 @@ def visualize():
     drop_rates = []
     # Create empty dataframe
     dfs = {}
+    size = 512
     for name in ["suricata","snort3","zeek"]:
-        sur_files = glob.glob(f"python/system_related/{name}/perf_files/ids_performance_log*.csv")
+        sur_files = glob.glob(f"python/system_related/{name}/perf_files_{size}/ids_performance_log*.csv")
        
         for file in sur_files:
             print(file)
@@ -53,19 +54,19 @@ def visualize():
     
     width,height = 8,6
     df.plot(x="Speed", y=["CPU_suricata", "CPU_snort3","CPU_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort3", "Zeek"])
-    plt.title("CPU Usage")
+    plt.title(f"CPU Usage Packet Size: {size}")
     plt.ylabel("CPU (%)")
     print("Saving plot CPU")
     plt.savefig(f"img/cpu.png")
 
     df.plot(x="Speed", y=["Memory_suricata", "Memory_snort3","Memory_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort3", "Zeek"])
-    plt.title("Memory Usage")
+    plt.title(f"Memory Usage Packet Size: {size}")
     plt.ylabel("Memory (%)")
     print("Saving plot Memory")
     plt.savefig(f"img/memory.png")
     
     df.plot(x="Speed", y=["Drop Rate_suricata", "Drop Rate_snort3","Drop Rate_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort3", "Zeek"])
-    plt.title("Drop Rate")
+    plt.title(f"Drop Rate Packet Size: {size}")
     plt.ylabel("Drop Rate (%)")
     print("Saving plot Drop Rate")
     plt.savefig(f"img/drop_rate.png")

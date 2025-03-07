@@ -44,9 +44,11 @@ def log_performance(log_file, process_name,tcp_proc):
             #psutil.process_iter.cache_clear()
     print_log("Logging complete")
 
-def run(ids_name, loop, speed):
-    
-    filepath = f"python/system_related/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
+def run(ids_name, loop, speed, pac_size):
+    if not os.path.exists(f"python/system_related/{ids_name}/perf_files_{pac_size}"):
+        print("Directory not found, creating directory...")
+        os.mkdir(f"python/system_related/{ids_name}/perf_files_{pac_size}")
+    filepath = f"python/system_related/{ids_name}/perf_files_{pac_size}/ids_performance_log_{speed}.csv"
     # Start {ids_name} as subprocess
     print_log(f"Starting {ids_name}...")
     
@@ -153,16 +155,83 @@ def extract_drop_rate_suricata():
                 print(f"Drop Rate: {drop_rate}%")
                 return drop_rate
     
+def change_packet_size(packet_size):
+    """ 
+    Change the packet size to a new int, for all IDSs
+    To implement a new IDS add the function for changing the packet size here 
+    """
+    change_packet_size_snort(packet_size)
+    change_packet_size_suricata(packet_size)
+    change_packet_size_zeek(packet_size) 
 
+def change_packet_size_snort(packet_size):
+    # Change config path to match your system
+    config_path = "python/system_related/snort3/config/talos.lua"
+    if not os.path.exists(config_path): 
+        print("Path for Snort config file not available, have you specified the correct path?")
+        return
+    # Search for line to change with re
+    with open(config_path, "r") as file:
+        data = file.read()
+    print(data)
+    data = re.sub(r"(\b\s*snaplen\s*=\s*)(\d+)", rf"snaplen = {str(packet_size)}", data)    
+    with open(config_path,"w") as file:
+        file.write(data)
+    # Restart IDS
+    #subprocess.Popen(["systemctl restart snort"])
+
+def change_packet_size_suricata(packet_size):
+    # Change config path to match your system (path for elias)
+    config_path = "/etc/suricata/suricata.yaml"
+    # home_path = "~"
+    if not os.path.exists(config_path): 
+        print("Path for suricata config file not available, have you specified the correct path?")
+        return
+    # subprocess.Popen(["sudo", "cp", f"{config_path}", f"{home_path}"]) # Move to home directory for file premissions
+    # Search for line to change with re
+    with open(config_path, "r") as file:
+        data = file.read()
+    print(data)
+    data = re.sub(r"(\s*#?max-pending-packets:\s*)(\d+)", rf"\nmax-pending-packets: {str(packet_size)}", data)
+    with open(config_path, "w") as file:
+        file.write(data)
+    # Move it back
+    # subprocess.Popen(["sudo", "mv", "suricata.yaml", "/etc/suricata/"])
+    # Restart IDS
+    #subprocess.Popen(["suricata-update"])
+
+    
+
+def change_packet_size_zeek(packet_size):
+    # Change config path to match your system (path for elias)
+    config_path = "/usr/local/zeek/share/zeekctl/scripts/zeekctl-config.sh"
+    if not os.path.exists(config_path): 
+        print("Path for Zeek config file not available, have you specified the correct path?")
+        return
+    # Search for line to change with re
+    with open(config_path, "r")  as file:
+        data = file.read()
+    data = re.sub(r'(\bpcapsnaplen\s*=\s*")(\d+)(")', rf'pcapsnaplen="{str(packet_size)}\3', data) # Only change the integer at the end
+    with open(config_path, "w") as file: # Replace string with new int value
+        file.write(data) 
+    # Restart IDS
+    # proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeekctl", "deploy"])
+    # time.sleep(20)
+    # proc.terminate()
+    
 def main(first, last, step, loop):
     # TODO: Add a sudo su command for root access
-    # root = subprocess.Popen(["sudo", "su"])
-    # root.terminate()
-    # root.wait()
-    for ids_name in ["snort3","suricata","zeek"]:
-        for i in range(first, last, step):
-            print("Running with speed:", i)
-            run(ids_name,loop,i)
+    root = subprocess.Popen(["sudo", "su"])
+    root.terminate()
+    root.wait()
+    packet_sizes = [512]
+    
+    for size in packet_sizes:
+        change_packet_size(size)
+        for ids_name in ["snort3","suricata","zeek"]:
+            for i in range(first, last, step):
+                print("Running with speed:", i)
+                run(ids_name, loop, i, size)
     
     visualize()
 
@@ -175,3 +244,4 @@ Loop - number of times to loop the pcap file
 """
 
 main(100,200,100,1)
+
