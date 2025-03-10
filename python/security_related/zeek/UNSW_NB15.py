@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import json
 
 def process_unsw_nb15_logs(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
@@ -18,25 +19,45 @@ def process_unsw_nb15_logs(pcap_file):
     df_gt['src_port'] = pd.to_numeric(df_gt['src_port'], errors='coerce')
     df_gt['dest_port'] = pd.to_numeric(df_gt['dest_port'], errors='coerce')
 
-    log_file = './eve.json'
-    if not os.path.exists(log_file):
-        print(f"Suricata log file not found for {pcap_file}. Skipping...")
+    conn_log_file = './conn.log'
+    notice_log_file = './notice.log'
+    
+    if not os.path.exists(conn_log_file and notice_log_file):
+        print(f"Zeek log files not found for {pcap_file}. Skipping...")
         return
-    df_suricata = pd.read_json(log_file, lines=True)
-    df_suricata = df_suricata[df_suricata['event_type'] == 'flow']
-    df_suricata["flow_alerted"] = df_suricata["flow"].apply(lambda x: x.get("alerted", False) if isinstance(x, dict) else False)
+    notice_df = pd.read_json('./notice.log', lines=True)
+    conn_df = pd.read_json('./conn.log', lines=True)
+    notice_df = notice_df[["id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto"]]
+    notice_df["flow_alerted"] = True  
 
-    df_suricata = df_suricata[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'flow_alerted']]  # Keep only necessary columns
-    df_suricata['proto'] = df_suricata['proto'].str.lower()
-    df_suricata["src_port"] = pd.to_numeric(df_suricata["src_port"], errors="coerce").fillna(0).astype(int)
-    df_suricata["dest_port"] = pd.to_numeric(df_suricata["dest_port"], errors="coerce").fillna(0).astype(int)
+    conn_df = conn_df[["id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto"]]
+
+    notice_df.rename(columns={
+        "id.orig_h": "src_ip",
+        "id.orig_p": "src_port",
+        "id.resp_h": "dest_ip",
+        "id.resp_p": "dest_port"
+    }, inplace=True)
+
+    conn_df.rename(columns={
+        "id.orig_h": "src_ip",
+        "id.orig_p": "src_port",
+        "id.resp_h": "dest_ip",
+        "id.resp_p": "dest_port"
+    }, inplace=True)
+
+    
+
+
+    df_zeek = pd.merge(conn_df, notice_df, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'],suffixes=('_conn', '_notice'))
+    df_zeek["flow_alerted"] = df_zeek["flow_alerted"].fillna(False)
 
 
 
-    df_merged = pd.merge(df_gt, df_suricata, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'],suffixes=('_gt', '_suricata'))
+    df_merged = pd.merge(df_gt, df_zeek, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'],suffixes=('_gt', '_suricata'))
     df_merged['flow_alerted_suricata'] = df_merged['flow_alerted_suricata'].fillna(False)
 
-    # df_suricata.to_csv("df_suricata.csv", index=False) 
+    # df_zeek.to_csv("df_zeek.csv", index=False) 
     # df_gt.to_csv("df_gt.csv", index=False) 
     # df_merged.to_csv("merged.csv", index=False) 
     df_tp = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_suricata"] == True)]

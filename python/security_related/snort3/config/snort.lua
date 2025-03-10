@@ -255,24 +255,11 @@ alert_csv = {
     file = true
 }
 
--- alert_unified2 = {
---     file = true,
--- }
-
--- log_pcap = 
--- {
---     enabled = true,
---     dir = "/var/log/snort/",
---     mode = "normal"
--- }
 --alert_fast = { }
 --alert_full = { }
 --alert_sfsocket = { }
 --alert_syslog = { }
 --unified2 = { }
--- alert_json = {
---     file = true
--- }
 
 -- packet logging
 -- you can enable with defaults from the command line with -L <log_type>
@@ -282,17 +269,6 @@ alert_csv = {
 
 -- additional logs
 --packet_capture = { }
---file_log = { log_pkt_time = true, log_sys_time = false }
-
-
--- output = { 
---     alert_fast = { file = true, filename = "/var/log/snort/alert.fast" },
---     packet_trace = true,
---     file_log = {
---         log_all_flows = true,
---         log_dir = "/var/log/snort/flows"
---     }
--- }
 
 
 ---------------------------------------------------------------------------

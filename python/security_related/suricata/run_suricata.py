@@ -40,7 +40,7 @@ def run_dataset(dataset, pcap_path):
     pcap_file = pcap_files[0]
     print(f"Processing: {pcap_file}")
 
-    cmd = ["sudo", "suricata", "-r", pcap_file, "-l", "./logs"]
+    cmd = ["sudo", "suricata", "-r", pcap_file, "-l", "./"]
     process = subprocess.Popen(cmd)
     process.wait()
 
@@ -116,7 +116,7 @@ def main():
     run_dataset(args.dataset, args.pcap_path)
 
     #Delete files afterwards
-    files_to_delete = ["./logs/eve.json", "./logs/fast.log", "./logs/stats.log", "./logs/suricata.log","./logs/merged.pcap"]
+    files_to_delete = ["./eve.json", "./fast.log", "./stats.log", "./suricata.log","./merged.pcap"]
 
     for file in files_to_delete:
         if os.path.exists(file):  
