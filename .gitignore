@@ -5,6 +5,8 @@ setup.py
 python/sys_pref/suricata/logs
 python/security_related/datasets/TII-SSRC-23/pcap
 python/security_related/datasets/TII-SSRC-23/ground_truth
+python/security_related/datasets
+
 python/security_related/datasets/UNSW-NB15/pcap
 python/security_related/datasets/UNSW-NB15/ground_truth
 python/security_related/suricata/logs

@@ -112,7 +112,7 @@ def main():
     run_dataset(args.dataset, args.pcap_path)
 
     # Delete files afterwards
-    files_to_delete = ["./alert_csv.txt"]
+    files_to_delete = ["./alert_csv.txt", "instance_mappings.csv"]
     for file in files_to_delete:
         if os.path.exists(file):  
             os.remove(file)

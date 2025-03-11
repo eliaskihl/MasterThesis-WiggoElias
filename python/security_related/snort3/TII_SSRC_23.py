@@ -39,10 +39,12 @@ def process_tii_ssrc_23_logs(pcap_file):
     column_names = ["timestamp", "pkt_num", "proto", "pkt_gen", "pkt_len", "dir", "src_ap", "dst_ap", "rule", "action"]
 
     # Load the Snort alert CSV file
-    df_snort = pd.read_csv("./logs/alert_csv.txt", names=column_names, header=None)
+    df_snort = pd.read_csv("./alert_csv.txt", names=column_names, header=None)
 
     # Rename 'action' to 'flow_alerted' and set it to True
     df_snort.rename(columns={'action': 'flow_alerted'}, inplace=True)
+    df_snort.to_csv("df_snort_before_mod.csv", index=False)
+
     df_snort['flow_alerted'] = True  # Set all values in flow_alerted to True
 
     # Split 'src_ap' and 'dst_ap' into IP and Port
@@ -56,16 +58,13 @@ def process_tii_ssrc_23_logs(pcap_file):
     # Keep only the necessary columns
     df_snort = df_snort[['timestamp', 'proto', 'src_ip', 'src_port', 'dest_ip', 'dest_port', 'flow_alerted']]
 
+    df_snort.to_csv("df_snort.csv", index=False)
 
     df_merged = df_gt.merge(df_snort, on=['proto', 'src_ip', 'src_port', 'dest_ip', 'dest_port'], how='left', suffixes=('_gt', '_snort'))
     df_merged = df_merged.drop_duplicates(subset=['src_port'], keep='first')
-    df_merged.to_csv("df_merged1.csv", index=False)
 
-    df_merged['flow_alerted_snort'].fillna(False, inplace=True)
+    df_merged.to_csv("df_merged.csv", index=False)
 
-    df_merged.to_csv("df_merged2.csv", index=False)
-
-    #df_merged.to_csv('df_merged',index=False)
     df_tp = df_merged[(df_merged["flow_alerted_snort"] == True) & (df_merged["flow_alerted_gt"] == True)]
     df_tn = df_merged[(df_merged["flow_alerted_snort"] == False) & (df_merged["flow_alerted_gt"] == False)]
     df_fp = df_merged[(df_merged["flow_alerted_snort"] == True) & (df_merged["flow_alerted_gt"] == False)]

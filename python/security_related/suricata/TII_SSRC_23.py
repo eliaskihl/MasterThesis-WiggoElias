@@ -37,7 +37,7 @@ def process_tii_ssrc_23_logs(pcap_file):
 
 
 
-    df_suricata = pd.read_json('./logs/eve.json', lines=True)
+    df_suricata = pd.read_json('./eve.json', lines=True)
     df_suricata = df_suricata[df_suricata['event_type'] == 'flow']
     df_suricata["flow_alerted"] = df_suricata["flow"].apply(lambda x: x.get("alerted", False) if isinstance(x, dict) else False)
 
@@ -48,7 +48,6 @@ def process_tii_ssrc_23_logs(pcap_file):
     df_merged = pd.merge(df_gt, df_suricata, how='inner', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'])
     df_merged = df_merged.drop_duplicates(subset=['src_port'], keep='first')
 
-    #df_merged.to_csv('df_merged',index=False)
     df_tp = df_merged[(df_merged["flow_alerted_x"] == True) & (df_merged["flow_alerted_y"] == True)]
     df_tn = df_merged[(df_merged["flow_alerted_x"] == False) & (df_merged["flow_alerted_y"] == False)]
     df_fp = df_merged[(df_merged["flow_alerted_x"] == False) & (df_merged["flow_alerted_y"] == True)]

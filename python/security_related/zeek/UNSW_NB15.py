@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-import json
+
 
 def process_unsw_nb15_logs(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)

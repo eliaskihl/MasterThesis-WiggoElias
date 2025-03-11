@@ -3,7 +3,7 @@ import argparse
 import os
 from tabulate import tabulate
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
-#from TII_SSRC_23 import process_tii_ssrc_23_logs
+from TII_SSRC_23 import process_tii_ssrc_23_logs
 from UNSW_NB15 import process_unsw_nb15_logs
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -40,7 +40,7 @@ def run_dataset(dataset, pcap_path):
     pcap_file = pcap_files[0]
     print(f"Processing: {pcap_file}")
 
-    cmd = ["zeek", "-C", "-r",pcap_file, "/opt/zeek/share/zeek/test-all-policy.zeek"]
+    cmd = ["zeek", "-C", "-r", pcap_file, "/opt/zeek/share/zeek/test-all-policy.zeek"]
     process = subprocess.Popen(cmd)
     process.wait()
 
@@ -67,7 +67,7 @@ def process_logs(dataset, pcap_file):
     print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1)
 
 def print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1):
-    """Print statistics in a structured table format."""
+    
     table = [
         ["True Positives", tot_true_pos],
         ["False Positives", tot_false_pos],
@@ -92,13 +92,13 @@ def print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_
     list_f1.append(f1)
     
     # Visualize with seaborn
-    cm = np.array([[tot_true_pos, tot_false_neg],[tot_false_pos, tot_true_neg]])
-    labels = ['True Pos','False Neg','False Pos','True Neg']
-    labels = np.asarray(labels).reshape(2,2)
-    sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-    plt.show()
+    # cm = np.array([[tot_true_pos, tot_false_neg],[tot_false_pos, tot_true_neg]])
+    # labels = ['True Pos','False Neg','False Pos','True Neg']
+    # labels = np.asarray(labels).reshape(2,2)
+    # sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
+    # plt.xlabel("Predicted")
+    # plt.ylabel("Actual")
+    # plt.show()
     # plt.plot(list_acc, label='Accuracy')
     # plt.plot(list_recall, label='Recall')
     # plt.plot(list_precision, label='Precision')
