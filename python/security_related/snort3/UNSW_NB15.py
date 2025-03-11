@@ -26,7 +26,7 @@ def process_unsw_nb15_logs(pcap_file):
     column_names = ["timestamp", "pkt_num", "proto", "pkt_gen", "pkt_len", "dir", "src_ap", "dst_ap", "rule", "action"]
 
     # Load the Snort alert CSV file
-    df_snort = pd.read_csv('./alert_csv.txt', names=column_names, header=None)
+    df_snort = pd.read_csv(log_file, names=column_names, header=None)
 
     # Rename 'action' to 'flow_alerted' and set it to True
     df_snort.rename(columns={'action': 'flow_alerted'}, inplace=True)
@@ -52,10 +52,6 @@ def process_unsw_nb15_logs(pcap_file):
 
     df_merged = pd.merge(df_gt, df_snort, how='left', on=['src_ip','src_port','dest_ip','dest_port','proto'],suffixes=('_gt', '_snort'))
     df_merged['flow_alerted_snort'] = df_merged['flow_alerted_snort'].fillna(False)
-
-    # df_snort.to_csv("df_snort_with.csv", index=False) 
-    # df_gt.to_csv("df_gt.csv", index=False) 
-    # df_merged.to_csv("merged.csv", index=False) 
     
     df_tp = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_snort"] == True)]
     df_tn = df_merged[(df_merged["flow_alerted_gt"] == False) & (df_merged["flow_alerted_snort"] == False)]
