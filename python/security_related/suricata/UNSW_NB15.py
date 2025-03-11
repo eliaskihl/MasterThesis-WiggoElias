@@ -1,3 +1,4 @@
+
 import pandas as pd
 import os
 
@@ -52,5 +53,4 @@ def process_unsw_nb15_logs(pcap_file):
     tot_true_neg += len(df_tn)
 
     return(tot_true_pos, tot_false_pos,tot_false_neg,tot_true_neg)
-
 
