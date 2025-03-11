@@ -15,7 +15,11 @@ TOOLS = {
         "zeek": {
         "dir": "python/security_related/zeek",
         "script": "run_zeek.py",
-    }
+    },
+        "syseval": {
+        "dir": "python/system_related",
+        "script": "run_all.py",
+    },
 }
 
 parser = argparse.ArgumentParser(description="Run specified security tools from the root directory")
@@ -33,6 +37,5 @@ nested_dir = tool_info["dir"]
 script = tool_info["script"]
 
 command = ["python", script] + args.args 
-
-
 subprocess.run(command, cwd=nested_dir)
+

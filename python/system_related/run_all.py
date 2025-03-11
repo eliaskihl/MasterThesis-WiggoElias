@@ -1,7 +1,5 @@
-
 import time
 import subprocess
-import time
 import psutil
 import csv
 import sys
@@ -9,6 +7,7 @@ import re
 import os
 from threading import Thread
 from vis_all import visualize
+import argparse
 
 def print_log(message):
     print(message)
@@ -38,38 +37,38 @@ def log_performance(log_file, process_name,tcp_proc):
                     writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), cpu_usage, memory_percentage])
                     f.flush()
 
-                    print(proc.info["name"], ":", proc.info["cpu_percent"],":", memory_percentage, ":", proc.info["pid"])
+                    #print(proc.info["name"], ":", proc.info["cpu_percent"],":", memory_percentage, ":", proc.info["pid"])
 
             time.sleep(5)
             #psutil.process_iter.cache_clear()
     print_log("Logging complete")
 
-def run(ids_name, loop, speed, pac_size):
-    if not os.path.exists(f"python/system_related/{ids_name}/perf_files_{pac_size}"):
+def run(ids_name, loop, speed, pac_size, interface):
+    if not os.path.exists(f"./{str(ids_name)}/perf_files_{str(pac_size)}"):
         print("Directory not found, creating directory...")
-        os.mkdir(f"python/system_related/{ids_name}/perf_files_{pac_size}")
-    filepath = f"python/system_related/{ids_name}/perf_files_{pac_size}/ids_performance_log_{speed}.csv"
-    # Start {ids_name} as subprocess
+        os.mkdir(f"./{str(ids_name)}/perf_files_{str(pac_size)}")
+    filepath = f"./{ids_name}/perf_files_{pac_size}/ids_performance_log_{speed}.csv"
+    # Start IDS as a subprocess
     print_log(f"Starting {ids_name}...")
     
-    temp = open(f"python/system_related/{ids_name}/tmp/temp.log", "w")
-    err = open(f"python/system_related/{ids_name}/tmp/err.log", "w")
+    temp = open(f"./{ids_name}/tmp/temp.log", "w")
+    err = open(f"./{ids_name}/tmp/err.log", "w")
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
+    # TODO: Change from path to ids name
     if ids_name == "suricata":
-        ids_proc = subprocess.Popen(["sudo", "suricata", "-i", "eth0", "-l", "./python/system_related/suricata/logs"], stdout=temp, stderr=err) 
+        ids_proc = subprocess.Popen(["sudo", "suricata", "-i", interface, "-l", "./suricata/logs"], stdout=temp, stderr=err) 
     elif ids_name == "snort3": # TODO Change the /usr/local/snort/bin/snort to snort?
-        ids_proc = subprocess.Popen(["sudo", "/usr/local/snort/bin/snort", "-c", "python/system_related/snort3/config/snort.lua", "-i", "eth0", "-l", "./python/system_related/snort3/logs"], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(["sudo", "snort", "-c", "./snort3/config/snort.lua", "-i", interface, "-l", "./snort3/logs"], stdout=temp, stderr=err)
     elif ids_name == "zeek": # TODO Change the /usr/local/zeek/bin/zeekctl command to zeekctl?
-        ids_proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeek", "-i", "eth0"], stdout=temp, stderr=err)
-        #ids_proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeekctl", "start"], stdout=temp, stderr=err)
-        #ids_proc = subprocess.Popen(["docker", "run", "--rm", "--net=host", "--name", "zeek-live", "zeek/zeek", "zeek", "-i", "eth0",], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(["sudo", "zeek", "-i", interface], stdout=temp, stderr=err)
+    
     time.sleep(40) # Give the process 40 seconds to intitate.
     # Start tcp replay
     print_log("Starting tcp replay...")
     time.sleep(1)
-    temp = open(f"python/system_related/{ids_name}/tmp/temp_tcpreplay.log", "w")
-    err = open(f"python/system_related/{ids_name}/tmp/err_tcpreplay.log", "w")
-    tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-i", "eth0", f"--loop={loop}", f"--mbps={speed}", "python/system_related/pcap/bigFlows.pcap"],stdout=temp, stderr=err)
+    temp = open(f"./{ids_name}/tmp/temp_tcpreplay.log", "w")
+    err = open(f"./{ids_name}/tmp/err_tcpreplay.log", "w")
+    tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/bigFlows.pcap"],stdout=temp, stderr=err)
     # Log performance in seperate thread while {ids_name} is running and until tcpreplay is done
     monitor_thread = Thread(target=log_performance, args=(filepath, f"{ids_name}", tcpreplay_proc))
     monitor_thread.start()
@@ -94,16 +93,19 @@ def run(ids_name, loop, speed, pac_size):
 
     # Extract drop rate from ids
     if ids_name == "suricata":
-        drop_rate = extract_drop_rate_suricata()
+        drop_rate, total_packets = extract_drop_rate_suricata()
     elif ids_name == "snort3":
-        drop_rate = extract_drop_rate_snort()
+        drop_rate, total_packets = extract_drop_rate_snort()
     elif ids_name == "zeek":
-        drop_rate = extract_drop_rate_zeek()
+        drop_rate, total_packets = extract_drop_rate_zeek()
     # Write drop rate to file
-    with open(f"python/system_related/{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
+    with open(f"./{ids_name}/perf_files_{pac_size}/drop_rate_{speed}.txt", "w") as f:
         f.write(str(drop_rate))
+    with open(f"./{ids_name}/perf_files_{pac_size}/total_packets_{speed}.txt", "w") as f:
+        f.write(str(total_packets))
+    
 def extract_drop_rate_zeek():
-    log = "python/system_related/zeek/tmp/err.log"
+    log = "./zeek/tmp/err.log"
     with open(log, "r") as file:
         for line in file:
             match = re.search(r"(\d+) packets received on interface (\S+), (\d+) \(([\d.]+)%\) dropped", line)
@@ -115,11 +117,11 @@ def extract_drop_rate_zeek():
                 print(f"Total Packets: {total_packets}")
                 print(f"Dropped Packets: {dropped_packets}")
                 print(f"Drop Rate: {drop_rate}%")
-                return drop_rate
+                return drop_rate, total_packets
     
 
 def extract_drop_rate_snort():
-    log = "python/system_related/snort3/tmp/temp.log"
+    log = "./snort3/tmp/temp.log"
     # Find line with "dropped" and "received"
     with open(log, "r") as file:
         for line in file:
@@ -138,10 +140,10 @@ def extract_drop_rate_snort():
                 print(f"Total Packets: {total_packets}")
                 print(f"Dropped Packets: {dropped_packets}")
                 print(f"Drop Rate: {drop_rate}%")
-                return drop_rate
+                return drop_rate, total_packets
 
 def extract_drop_rate_suricata():
-    log = "python/system_related/suricata/tmp/temp.log"
+    log = "./suricata/tmp/temp.log"
     with open(log, "r") as file:
         for line in file:
             match = re.search(r"i: device: (\S+): packets: (\d+), drops: (\d+) \(([\d.]+)%\), invalid chksum: (\d+)", line)
@@ -153,7 +155,7 @@ def extract_drop_rate_suricata():
                 print(f"Total Packets: {total_packets}")
                 print(f"Dropped Packets: {dropped_packets}")
                 print(f"Drop Rate: {drop_rate}%")
-                return drop_rate
+                return drop_rate, total_packets
     
 def change_packet_size(packet_size):
     """ 
@@ -166,14 +168,14 @@ def change_packet_size(packet_size):
 
 def change_packet_size_snort(packet_size):
     # Change config path to match your system
-    config_path = "python/system_related/snort3/config/talos.lua"
+    config_path = "./snort3/config/talos.lua"
     if not os.path.exists(config_path): 
         print("Path for Snort config file not available, have you specified the correct path?")
         return
     # Search for line to change with re
     with open(config_path, "r") as file:
         data = file.read()
-    print(data)
+    
     data = re.sub(r"(\b\s*snaplen\s*=\s*)(\d+)", rf"snaplen = {str(packet_size)}", data)    
     with open(config_path,"w") as file:
         file.write(data)
@@ -191,7 +193,7 @@ def change_packet_size_suricata(packet_size):
     # Search for line to change with re
     with open(config_path, "r") as file:
         data = file.read()
-    print(data)
+    
     data = re.sub(r"(\s*#?max-pending-packets:\s*)(\d+)", rf"\nmax-pending-packets: {str(packet_size)}", data)
     with open(config_path, "w") as file:
         file.write(data)
@@ -219,21 +221,6 @@ def change_packet_size_zeek(packet_size):
     # time.sleep(20)
     # proc.terminate()
     
-def main(first, last, step, loop):
-    # TODO: Add a sudo su command for root access
-    root = subprocess.Popen(["sudo", "su"])
-    root.terminate()
-    root.wait()
-    packet_sizes = [512]
-    
-    for size in packet_sizes:
-        change_packet_size(size)
-        for ids_name in ["snort3","suricata","zeek"]:
-            for i in range(first, last, step):
-                print("Running with speed:", i)
-                run(ids_name, loop, i, size)
-    
-    visualize()
 
 """
 Arguments for main():
@@ -243,5 +230,35 @@ Step - mbits/s speed index increase per iteration
 Loop - number of times to loop the pcap file
 """
 
-main(100,200,100,1)
+# main([512],100,200,100,1)
+def main():
+    print("Current Working Directory:", os.getcwd())
+    parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
+    parser.add_argument("packet_size", help="Choose packet sizes")
+    parser.add_argument("interface",help="Which interface should the IDSs be run on?")
+    args = parser.parse_args()
+    loop = 1
+    first = 100
+    last = 200
+    step = 100
+
+    # TODO: Add a sudo su command for root access
+    #subprocess.Popen(["sudo", "su"])
+    
+    
+   
+        
+    
+    change_packet_size(args.packet_size)
+    for ids_name in ["snort3","suricata","zeek"]:
+        for i in range(first,last,step):
+            print("Running with speed:", i)
+            run(ids_name, loop, i, args.packet_size, args.interface)
+    
+    visualize(args.packet_size)
+    # Remove log files from zeek
+    subprocess.Popen(["rm", "./python/system_related/*.log"])
+    
+if __name__ == "__main__":
+    main()
 
