@@ -29,6 +29,8 @@ EXTERNAL_NET = 'any'
 
 include 'snort_defaults.lua'
 
+
+
 ---------------------------------------------------------------------------
 -- 2. configure inspection
 ---------------------------------------------------------------------------
@@ -251,16 +253,13 @@ rate_filter =
 -- uncomment below to set non-default configs
 alert_csv = {
     file = true
-    
- }
+}
+
 --alert_fast = { }
 --alert_full = { }
 --alert_sfsocket = { }
 --alert_syslog = { }
 --unified2 = { }
--- alert_json = {
---     file = true
--- }
 
 -- packet logging
 -- you can enable with defaults from the command line with -L <log_type>
@@ -270,7 +269,7 @@ alert_csv = {
 
 -- additional logs
 --packet_capture = { }
---file_log = { }
+
 
 ---------------------------------------------------------------------------
 -- 8. configure tweaks

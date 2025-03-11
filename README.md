@@ -1,4 +1,8 @@
 # Process for running the program ###
+
+## Preequisites ##
+
+Make sure to have Zeek, Snort3 and Suricata avaialable on your system. Make sure that they are added to your path so that they can be run within this directory. 
 ##### Must be run in WSL or Linux
 ### Step 1
 Have a folder with pcap files for a dataset that is given in the program (UNSW-NB15, TI-SSRC-23, etc)

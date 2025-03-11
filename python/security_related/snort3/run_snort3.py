@@ -38,7 +38,7 @@ def run_dataset(dataset, pcap_path):
     pcap_file = pcap_files[0]
     print(f"Processing: {pcap_file}")
 
-    cmd = ["snort", "-c", "./config/snort.lua", "-r", pcap_file, "-l", "./logs"]
+    cmd = ["snort", "-c", "./config/snort.lua", "-r", pcap_file, "-l", "./"]
     process = subprocess.Popen(cmd)
     process.wait()
 
@@ -112,7 +112,7 @@ def main():
     run_dataset(args.dataset, args.pcap_path)
 
     # Delete files afterwards
-    files_to_delete = ["./logs/alert.csv", "./logs/snort.log", "./logs/merged.pcap"]
+    files_to_delete = ["./alert_csv.txt", "instance_mappings.csv"]
     for file in files_to_delete:
         if os.path.exists(file):  
             os.remove(file)
