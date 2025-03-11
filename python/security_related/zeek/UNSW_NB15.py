@@ -57,9 +57,6 @@ def process_unsw_nb15_logs(pcap_file):
     df_merged = pd.merge(df_gt, df_zeek, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'],suffixes=('_gt', '_suricata'))
     df_merged['flow_alerted_suricata'] = df_merged['flow_alerted_suricata'].fillna(False)
 
-    # df_zeek.to_csv("df_zeek.csv", index=False) 
-    # df_gt.to_csv("df_gt.csv", index=False) 
-    # df_merged.to_csv("merged.csv", index=False) 
     df_tp = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_suricata"] == True)]
     df_tn = df_merged[(df_merged["flow_alerted_gt"] == False) & (df_merged["flow_alerted_suricata"] == False)]
     df_fp = df_merged[(df_merged["flow_alerted_gt"] == False) & (df_merged["flow_alerted_suricata"] == True)]

@@ -77,7 +77,7 @@ def process_tii_ssrc_23_logs(pcap_file):
 
 
 
-    df_merged = pd.merge(df_gt, df_zeek, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'])
+    df_merged = pd.merge(df_gt, df_zeek, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'],suffixes=('_gt', '_zeek'))
 
     df_merged.to_csv("merged.csv", index=False) 
     df_tp = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_suricata"] == True)]

@@ -5,6 +5,7 @@ from tabulate import tabulate
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from TII_SSRC_23 import process_tii_ssrc_23_logs
 from UNSW_NB15 import process_unsw_nb15_logs
+from BOT_IOT import process_bot_iot_logs
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +14,8 @@ def run_dataset(dataset, pcap_path):
 
     dataset_paths = {
         "TII-SSRC-23": "../datasets/TII-SSRC-23",
-        "UNSW-NB15": "../datasets/UNSW-NB15"
+        "UNSW-NB15": "../datasets/UNSW-NB15",
+        "BOT-IOT": "../datasets/BOT-IOT"
     }
     
     if dataset not in dataset_paths:
@@ -55,6 +57,8 @@ def process_logs(dataset, pcap_file):
         tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_unsw_nb15_logs(pcap_file)
     elif dataset == "TII-SSRC-23":
         tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_tii_ssrc_23_logs(pcap_file)
+    elif dataset == "BOT-IOT":
+        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_bot_iot_logs(pcap_file)
     else:
         print(f"No processing logic available for the dataset: {dataset}")
     
@@ -110,7 +114,7 @@ def print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_
 
 def main():
     parser = argparse.ArgumentParser(description="Run Suricata on a specified dataset and PCAP file/folder.")
-    parser.add_argument("dataset", choices=["TII-SSRC-23", "UNSW-NB15"], help="Choose a dataset")
+    parser.add_argument("dataset", choices=["TII-SSRC-23", "UNSW-NB15", "BOT-IOT"], help="Choose a dataset")
     parser.add_argument("pcap_path", help="Specify a PCAP file or folder name within the dataset")
     args = parser.parse_args()
     run_dataset(args.dataset, args.pcap_path)
