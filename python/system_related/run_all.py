@@ -27,10 +27,10 @@ def log_performance(log_file, process_name,tcp_proc):
                 
                 if process_name in proc.info["name"].lower():
                     
-                    cpu_usage = proc.info["cpu_percent"]
-                    rss_mem = proc.info["memory_info"].rss # rss mem in bytes?
-                    # Get the total system memory (in bytes)
-                    tot_mem = psutil.virtual_memory().total
+                    cpu_usage = proc.info["cpu_percent"] #CPU Utilization
+                    rss_mem = proc.info["memory_info"].rss # Physical memory process used
+                    
+                    tot_mem = psutil.virtual_memory().total # Gets total physical memoryof computer
                     memory_percentage = (rss_mem / tot_mem) * 100
 
                     
@@ -56,11 +56,11 @@ def run(ids_name, loop, speed, pac_size, interface):
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
     # TODO: Change from path to ids name
     if ids_name == "suricata":
-        ids_proc = subprocess.Popen(["sudo", "suricata", "-i", interface, "-l", "./suricata/logs"], stdout=temp, stderr=err) 
+        ids_proc = subprocess.Popen(["suricata", "-i", interface, "-l", "./suricata/logs"], stdout=temp, stderr=err) 
     elif ids_name == "snort3": # TODO Change the /usr/local/snort/bin/snort to snort?
-        ids_proc = subprocess.Popen(["sudo", "snort", "-c", "./snort3/config/snort.lua", "-i", interface, "-l", "./snort3/logs"], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(["snort", "-c", "./snort3/config/snort.lua", "-i", interface, "-l", "./snort3/logs"], stdout=temp, stderr=err)
     elif ids_name == "zeek": # TODO Change the /usr/local/zeek/bin/zeekctl command to zeekctl?
-        ids_proc = subprocess.Popen(["sudo", "zeek", "-i", interface], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(["zeek", "-i", interface], stdout=temp, stderr=err)
     
     time.sleep(40) # Give the process 40 seconds to intitate.
     # Start tcp replay
@@ -68,7 +68,7 @@ def run(ids_name, loop, speed, pac_size, interface):
     time.sleep(1)
     temp = open(f"./{ids_name}/tmp/temp_tcpreplay.log", "w")
     err = open(f"./{ids_name}/tmp/err_tcpreplay.log", "w")
-    tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/bigFlows.pcap"],stdout=temp, stderr=err)
+    tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/smallFlows.pcap"],stdout=temp, stderr=err)
     # Log performance in seperate thread while {ids_name} is running and until tcpreplay is done
     monitor_thread = Thread(target=log_performance, args=(filepath, f"{ids_name}", tcpreplay_proc))
     monitor_thread.start()
@@ -230,7 +230,7 @@ Step - mbits/s speed index increase per iteration
 Loop - number of times to loop the pcap file
 """
 
-# main([512],100,200,100,1)
+
 def main():
     print("Current Working Directory:", os.getcwd())
     parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
@@ -245,9 +245,6 @@ def main():
     # TODO: Add a sudo su command for root access
     #subprocess.Popen(["sudo", "su"])
     
-    
-   
-        
     
     change_packet_size(args.packet_size)
     for ids_name in ["snort3","suricata","zeek"]:
