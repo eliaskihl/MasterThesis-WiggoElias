@@ -1,4 +1,18 @@
-i: suricata: This is Suricata version 7.0.3 RELEASE running in SYSTEM mode
+i: suricata: This is Suricata version 7.0.8 RELEASE running in SYSTEM mode
 i: threads: Threads created -> W: 1 FM: 1 FR: 1   Engine started.
-i: suricata: Signal Received.  Stopping engine.
-i: device: eth0: packets: 714178, drops: 13517 (1.89%), invalid chksum: 0
+ii: suricata: Signal Received.  Stopping engine.
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down
+W: af-packet: wlp1s0: failed to poll interface: Network is down

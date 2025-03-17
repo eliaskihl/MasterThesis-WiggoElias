@@ -50,8 +50,8 @@ def process_bot_iot_logs(pcap_file):
     df_snort['flow_alerted'] = True  # Set all values in flow_alerted to True
 
     # Split 'src_ap' and 'dst_ap' into IP and Port
-    df_snort[['src_ip', 'src_port']] = df_snort['dst_ap'].str.split(':', expand=True)
-    df_snort[['dest_ip', 'dest_port']] = df_snort['src_ap'].str.split(':', expand=True)
+    df_snort[['src_ip', 'src_port']] = df_snort['src_ap'].str.split(':', n=1, expand=True)
+    df_snort[['dest_ip', 'dest_port']] = df_snort['dst_ap'].str.split(':', n=1, expand=True)
 
     # Convert ports to integers for consistency
     df_snort['src_port'] = pd.to_numeric(df_snort['src_port'], errors='coerce')

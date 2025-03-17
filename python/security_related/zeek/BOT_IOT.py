@@ -54,9 +54,13 @@ def process_bot_iot_logs(pcap_file):
     notice_df['src_port'] = pd.to_numeric(notice_df['src_port'], errors='coerce').astype('Int64')
     notice_df['dest_port'] = pd.to_numeric(notice_df['dest_port'], errors='coerce').astype('Int64')
 
+    # notice_df.to_csv("notice_df.csv")
+    # df_gt.to_csv("df_gt.csv")
 
     df_merged = pd.merge(df_gt, notice_df, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'],suffixes=('_gt', '_zeek'))
     df_merged["flow_alerted_zeek"] = df_merged["flow_alerted_zeek"].fillna(False)
+
+    # df_merged.to_csv("df_merged.csv")
 
     df_tp = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_zeek"] == True)]
     df_tn = df_merged[(df_merged["flow_alerted_gt"] == False) & (df_merged["flow_alerted_zeek"] == False)]

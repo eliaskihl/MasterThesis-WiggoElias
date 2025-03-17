@@ -8,6 +8,7 @@ import os
 from threading import Thread
 from vis_all import visualize
 import argparse
+from dotenv import load_dotenv,find_dotenv
 
 def print_log(message):
     print(message)
@@ -44,6 +45,12 @@ def log_performance(log_file, process_name,tcp_proc):
     print_log("Logging complete")
 
 def run(ids_name, loop, speed, pac_size, interface):
+    dotenv_path = find_dotenv()
+    load_dotenv(dotenv_path)
+    snort_path = os.getenv("SNORT_PATH")
+    zeek_path = os.getenv("ZEEK_PATH")
+    suricata_path = os.getenv("SURICATA_PATH")
+    
     if not os.path.exists(f"./{str(ids_name)}/perf_files_{str(pac_size)}"):
         print("Directory not found, creating directory...")
         os.mkdir(f"./{str(ids_name)}/perf_files_{str(pac_size)}")
@@ -56,19 +63,20 @@ def run(ids_name, loop, speed, pac_size, interface):
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
     # TODO: Change from path to ids name
     if ids_name == "suricata":
-        ids_proc = subprocess.Popen(["sudo", "suricata", "-i", interface, "-l", "./suricata/logs"], stdout=temp, stderr=err) 
+        ids_proc = subprocess.Popen(["sudo", suricata_path, "-i", interface, "-l", "./suricata/logs"], stdout=temp, stderr=err) 
     elif ids_name == "snort3": # TODO Change the /usr/local/snort/bin/snort to snort?
-        ids_proc = subprocess.Popen(["sudo", "snort", "-c", "./snort3/config/snort.lua", "-i", interface, "-l", "./snort3/logs"], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(["sudo", snort_path, "-c", "../config/snort3/snort.lua", "-i", interface], stdout=temp, stderr=err)
     elif ids_name == "zeek": # TODO Change the /usr/local/zeek/bin/zeekctl command to zeekctl?
-        ids_proc = subprocess.Popen(["sudo", "zeek", "-i", interface], stdout=temp, stderr=err)
-    
+        ids_proc = subprocess.Popen(["sudo", zeek_path, "-i", interface], stdout=temp, stderr=err)
+
+    # TODO: change from sleep to something else 
     time.sleep(40) # Give the process 40 seconds to intitate.
     # Start tcp replay
     print_log("Starting tcp replay...")
     time.sleep(1)
     temp = open(f"./{ids_name}/tmp/temp_tcpreplay.log", "w")
     err = open(f"./{ids_name}/tmp/err_tcpreplay.log", "w")
-    tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/bigFlows.pcap"],stdout=temp, stderr=err)
+    tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/smallFlows.pcap"],stdout=temp, stderr=err)
     # Log performance in seperate thread while {ids_name} is running and until tcpreplay is done
     monitor_thread = Thread(target=log_performance, args=(filepath, f"{ids_name}", tcpreplay_proc))
     monitor_thread.start()
@@ -128,7 +136,6 @@ def extract_drop_rate_snort():
             
             rec_match = re.search(r"\s*received:\s*(\d+)\s*", line)
             drop_match = re.search(r"\s*dropped:\s*(\d+)\s*", line)
-            
             if rec_match:
                 total_packets = int(rec_match.group(1))
             if drop_match:
@@ -137,6 +144,8 @@ def extract_drop_rate_snort():
                     drop_rate = (dropped_packets / total_packets) * 100
                 else: 
                     drop_rate = 0.0
+            else:
+                drop_rate = 0.0
                 print(f"Total Packets: {total_packets}")
                 print(f"Dropped Packets: {dropped_packets}")
                 print(f"Drop Rate: {drop_rate}%")
@@ -168,7 +177,7 @@ def change_packet_size(packet_size):
 
 def change_packet_size_snort(packet_size):
     # Change config path to match your system
-    config_path = "./snort3/config/talos.lua"
+    config_path = "../config/snort3/talos.lua"
     if not os.path.exists(config_path): 
         print("Path for Snort config file not available, have you specified the correct path?")
         return
@@ -184,7 +193,7 @@ def change_packet_size_snort(packet_size):
 
 def change_packet_size_suricata(packet_size):
     # Change config path to match your system (path for elias)
-    config_path = "/etc/suricata/suricata.yaml"
+    config_path = "../config/suricata/suricata.yaml"
     # home_path = "~"
     if not os.path.exists(config_path): 
         print("Path for suricata config file not available, have you specified the correct path?")
@@ -206,7 +215,7 @@ def change_packet_size_suricata(packet_size):
 
 def change_packet_size_zeek(packet_size):
     # Change config path to match your system (path for elias)
-    config_path = "/usr/local/zeek/share/zeekctl/scripts/zeekctl-config.sh"
+    config_path = "../config/zeek/zeekctl-config.sh"
     if not os.path.exists(config_path): 
         print("Path for Zeek config file not available, have you specified the correct path?")
         return
@@ -250,7 +259,7 @@ def main():
         
     
     change_packet_size(args.packet_size)
-    for ids_name in ["snort3","suricata","zeek"]:
+    for ids_name in ["suricata","snort3","zeek"]:
         for i in range(first,last,step):
             print("Running with speed:", i)
             run(ids_name, loop, i, args.packet_size, args.interface)

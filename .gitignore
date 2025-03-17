@@ -28,4 +28,4 @@ python/system_related/*/tmp
 python/system_related/zeek/config
 python/system_related/zeek/perf_files*
 python/system_related/RUN.md
-.gitignore
+

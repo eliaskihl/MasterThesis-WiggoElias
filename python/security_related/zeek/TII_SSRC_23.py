@@ -11,6 +11,8 @@ def process_tii_ssrc_23_logs(pcap_file):
     "../datasets/TII-SSRC-23/pcap/udp_dos.pcap": "../datasets/TII-SSRC-23/ground_truth/DoS UDP.csv",
     "../datasets/TII-SSRC-23/pcap/mirai_ddos_syn.pcap": "../datasets/TII-SSRC-23/ground_truth/Mirai DDoS SYN.csv",
     "../datasets/TII-SSRC-23/pcap/mirai_ddos_syn.pcap": "../datasets/TII-SSRC-23/ground_truth/Mirai DDoS SYN.csv",
+    "../datasets/TII-SSRC-23/pcap/bruteforce_ftp.pcap": "../datasets/TII-SSRC-23/ground_truth/Bruteforce FTP.csv",
+    "../datasets/TII-SSRC-23/pcap/bruteforce_ssh.pcap": "../datasets/TII-SSRC-23/ground_truth/Bruteforce SSH.csv",
 
 
     }
@@ -41,19 +43,15 @@ def process_tii_ssrc_23_logs(pcap_file):
     df_gt['dest_port'] = pd.to_numeric(df_gt['dest_port'], errors='coerce')
 
 
-    conn_log_file = './conn.log'
     notice_log_file = './notice.log'
     
-    if not os.path.exists(conn_log_file and notice_log_file):
+    if not os.path.exists(notice_log_file):
         print(f"Zeek log files not found for {pcap_file}. Skipping...")
         sys.exit()
     
     notice_df = pd.read_json('./notice.log', lines=True)
-    conn_df = pd.read_json('./conn.log', lines=True)
     notice_df = notice_df[["id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto"]]
     notice_df["flow_alerted"] = True  
-
-    conn_df = conn_df[["id.orig_h", "id.orig_p", "id.resp_h", "id.resp_p", "proto"]]
 
     notice_df.rename(columns={
         "id.orig_h": "src_ip",
@@ -62,22 +60,7 @@ def process_tii_ssrc_23_logs(pcap_file):
         "id.resp_p": "dest_port"
     }, inplace=True)
 
-    conn_df.rename(columns={
-        "id.orig_h": "src_ip",
-        "id.orig_p": "src_port",
-        "id.resp_h": "dest_ip",
-        "id.resp_p": "dest_port"
-    }, inplace=True)
-
-    
-
-
-    df_zeek = pd.merge(conn_df, notice_df, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'])
-    df_zeek["flow_alerted"] = df_zeek["flow_alerted"].fillna(False)
-
-
-
-    df_merged = pd.merge(df_gt, df_zeek, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'],suffixes=('_gt', '_zeek'))
+    df_merged = pd.merge(df_gt, notice_df, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'],suffixes=('_gt', '_zeek'))
 
     df_merged.to_csv("merged.csv", index=False) 
     df_tp = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_suricata"] == True)]
