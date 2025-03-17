@@ -19,7 +19,7 @@ def log_performance(log_file, process_name,tcp_proc):
         # Writes to csv
         writer = csv.writer(f)
         writer.writerow(["Time", "CPU_Usage (%)", "Memory_Usage (%)"])  # CSV header
-        psutil.cpu_percent(interval=10)
+        psutil.cpu_percent(interval=1)
         while tcp_proc.poll() is None:
             # Find the process by name
             for proc in psutil.process_iter(attrs=["pid", "name", "cpu_percent", "memory_info"]):
@@ -55,14 +55,19 @@ def run(ids_name, loop, speed, pac_size, interface):
     err = open(f"./{ids_name}/tmp/err.log", "w")
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
     # TODO: Change from path to ids name
+    # TODO: function waiting for ids to start
     if ids_name == "suricata":
-        ids_proc = subprocess.Popen(["suricata", "-i", interface, "-l", "./suricata/logs"], stdout=temp, stderr=err) 
+        ids_proc = subprocess.Popen(["sudo", "suricata", "-i", interface, "-l", "./suricata/logs"], stdout=temp, stderr=err) 
     elif ids_name == "snort3": # TODO Change the /usr/local/snort/bin/snort to snort?
-        ids_proc = subprocess.Popen(["snort", "-c", "./snort3/config/snort.lua", "-i", interface, "-l", "./snort3/logs"], stdout=temp, stderr=err)
+        #ids_proc = subprocess.Popen(["sudo", "/usr/local/snort/bin/snort", "-c", "./snort3/config/snort.lua", "-i", interface], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(
+            ["sudo", "/usr/local/snort/bin/snort", "-c", "./snort3/config/snort.lua", "-i", "eth0"], stdout=temp, stderr=err)
+        
     elif ids_name == "zeek": # TODO Change the /usr/local/zeek/bin/zeekctl command to zeekctl?
-        ids_proc = subprocess.Popen(["zeek", "-i", interface], stdout=temp, stderr=err)
-    
-    time.sleep(40) # Give the process 40 seconds to intitate.
+        ids_proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeek", "-i", interface, "-C"], stdout=temp, stderr=err)
+    # Wait for the IDS to send a start "signal"
+    wait_for_start(ids_name, interface)
+    #time.sleep(120) # Give the process 40 seconds to intitate.
     # Start tcp replay
     print_log("Starting tcp replay...")
     time.sleep(1)
@@ -201,7 +206,6 @@ def change_packet_size_suricata(packet_size):
     # subprocess.Popen(["sudo", "mv", "suricata.yaml", "/etc/suricata/"])
     # Restart IDS
     #subprocess.Popen(["suricata-update"])
-
     
 
 def change_packet_size_zeek(packet_size):
@@ -220,7 +224,22 @@ def change_packet_size_zeek(packet_size):
     # proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeekctl", "deploy"])
     # time.sleep(20)
     # proc.terminate()
+
+def wait_for_start(ids,interface):
+    if ids == "suricata":
+        while open(f"./{ids}/tmp/temp.log", 'r').read().find("Engine started") < 0:
+            time.sleep(2)
+    elif ids == "snort3":
+        time.sleep(30)
+        # while open(f"./{ids}/tmp/temp.log", 'r').read().find(f"++ [0] {interface}") < 0: 
+        #     time.sleep(2)
     
+    elif ids == "zeek":
+        while open(f"./{ids}/tmp/err.log", 'r').read().find(f"listening on {interface}") < 0: 
+            time.sleep(2)
+    else:
+        raise Exception("Wrong ids assigned.")
+
 
 """
 Arguments for main():
@@ -237,10 +256,10 @@ def main():
     parser.add_argument("packet_size", help="Choose packet sizes")
     parser.add_argument("interface",help="Which interface should the IDSs be run on?")
     args = parser.parse_args()
-    loop = 1
-    first = 100
+    loop = 10
+    first = 20
     last = 200
-    step = 100
+    step = 10
 
     # TODO: Add a sudo su command for root access
     #subprocess.Popen(["sudo", "su"])
@@ -254,7 +273,8 @@ def main():
     
     visualize(args.packet_size)
     # Remove log files from zeek
-    subprocess.Popen(["rm", "./python/system_related/*.log"])
+    print("Current Working Directory 2:", os.getcwd())
+    subprocess.Popen(["rm *.log"])
     
 if __name__ == "__main__":
     main()
