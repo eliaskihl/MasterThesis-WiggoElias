@@ -8,6 +8,7 @@ import os
 from threading import Thread
 from vis_all import visualize
 import argparse
+from dotenv import load_dotenv,find_dotenv
 
 def print_log(message):
     print(message)
@@ -19,7 +20,7 @@ def log_performance(log_file, process_name,tcp_proc):
         # Writes to csv
         writer = csv.writer(f)
         writer.writerow(["Time", "CPU_Usage (%)", "Memory_Usage (%)"])  # CSV header
-        psutil.cpu_percent(interval=1)
+        psutil.cpu_percent(interval=10)
         while tcp_proc.poll() is None:
             # Find the process by name
             for proc in psutil.process_iter(attrs=["pid", "name", "cpu_percent", "memory_info"]):
@@ -27,10 +28,10 @@ def log_performance(log_file, process_name,tcp_proc):
                 
                 if process_name in proc.info["name"].lower():
                     
-                    cpu_usage = proc.info["cpu_percent"] #CPU Utilization
-                    rss_mem = proc.info["memory_info"].rss # Physical memory process used
-                    
-                    tot_mem = psutil.virtual_memory().total # Gets total physical memoryof computer
+                    cpu_usage = proc.info["cpu_percent"]
+                    rss_mem = proc.info["memory_info"].rss # rss mem in bytes?
+                    # Get the total system memory (in bytes)
+                    tot_mem = psutil.virtual_memory().total
                     memory_percentage = (rss_mem / tot_mem) * 100
 
                     
@@ -44,6 +45,12 @@ def log_performance(log_file, process_name,tcp_proc):
     print_log("Logging complete")
 
 def run(ids_name, loop, speed, pac_size, interface):
+    dotenv_path = find_dotenv()
+    load_dotenv(dotenv_path)
+    snort_path = os.getenv("SNORT_PATH")
+    zeek_path = os.getenv("ZEEK_PATH")
+    suricata_path = os.getenv("SURICATA_PATH")
+    
     if not os.path.exists(f"./{str(ids_name)}/perf_files_{str(pac_size)}"):
         print("Directory not found, creating directory...")
         os.mkdir(f"./{str(ids_name)}/perf_files_{str(pac_size)}")
@@ -55,19 +62,15 @@ def run(ids_name, loop, speed, pac_size, interface):
     err = open(f"./{ids_name}/tmp/err.log", "w")
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
     # TODO: Change from path to ids name
-    # TODO: function waiting for ids to start
     if ids_name == "suricata":
-        ids_proc = subprocess.Popen(["sudo", "suricata", "-i", interface, "-l", "./suricata/logs"], stdout=temp, stderr=err) 
+        ids_proc = subprocess.Popen(["sudo", suricata_path, "-i", interface, "-l", "./suricata/logs"], stdout=temp, stderr=err) 
     elif ids_name == "snort3": # TODO Change the /usr/local/snort/bin/snort to snort?
-        #ids_proc = subprocess.Popen(["sudo", "/usr/local/snort/bin/snort", "-c", "./snort3/config/snort.lua", "-i", interface], stdout=temp, stderr=err)
-        ids_proc = subprocess.Popen(
-            ["sudo", "/usr/local/snort/bin/snort", "-c", "./snort3/config/snort.lua", "-i", "eth0"], stdout=temp, stderr=err)
-        
+        ids_proc = subprocess.Popen(["sudo", snort_path, "-c", "../config/snort3/snort.lua", "-i", interface], stdout=temp, stderr=err)
     elif ids_name == "zeek": # TODO Change the /usr/local/zeek/bin/zeekctl command to zeekctl?
-        ids_proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeek", "-i", interface, "-C", "/usr/local/zeek/share/zeek/test-all-policy.zeek"], stdout=temp, stderr=err)
-    # Wait for the IDS to send a start "signal"
-    wait_for_start(ids_name, interface)
-    #time.sleep(120) # Give the process 40 seconds to intitate.
+        ids_proc = subprocess.Popen(["sudo", zeek_path, "-i", interface], stdout=temp, stderr=err)
+
+    # TODO: change from sleep to something else 
+    time.sleep(40) # Give the process 40 seconds to intitate.
     # Start tcp replay
     print_log("Starting tcp replay...")
     time.sleep(1)
@@ -126,19 +129,13 @@ def extract_drop_rate_zeek():
     
 
 def extract_drop_rate_snort():
-    drop_rate = 0.0
-    total_packets = 0
     log = "./snort3/tmp/temp.log"
     # Find line with "dropped" and "received"
-    # Wait for line to appear
-    while open(f"./snort3/tmp/temp.log", 'r').read().find(f"daq") < 0:
-        time.sleep(2)
     with open(log, "r") as file:
         for line in file:
             
             rec_match = re.search(r"\s*received:\s*(\d+)\s*", line)
             drop_match = re.search(r"\s*dropped:\s*(\d+)\s*", line)
-            
             if rec_match:
                 total_packets = int(rec_match.group(1))
             if drop_match:
@@ -147,6 +144,8 @@ def extract_drop_rate_snort():
                     drop_rate = (dropped_packets / total_packets) * 100
                 else: 
                     drop_rate = 0.0
+            else:
+                drop_rate = 0.0
                 print(f"Total Packets: {total_packets}")
                 print(f"Dropped Packets: {dropped_packets}")
                 print(f"Drop Rate: {drop_rate}%")
@@ -178,7 +177,7 @@ def change_packet_size(packet_size):
 
 def change_packet_size_snort(packet_size):
     # Change config path to match your system
-    config_path = "./snort3/config/talos.lua"
+    config_path = "../config/snort3/talos.lua"
     if not os.path.exists(config_path): 
         print("Path for Snort config file not available, have you specified the correct path?")
         return
@@ -194,7 +193,7 @@ def change_packet_size_snort(packet_size):
 
 def change_packet_size_suricata(packet_size):
     # Change config path to match your system (path for elias)
-    config_path = "/etc/suricata/suricata.yaml"
+    config_path = "../config/suricata/suricata.yaml"
     # home_path = "~"
     if not os.path.exists(config_path): 
         print("Path for suricata config file not available, have you specified the correct path?")
@@ -203,19 +202,20 @@ def change_packet_size_suricata(packet_size):
     # Search for line to change with re
     with open(config_path, "r") as file:
         data = file.read()
-    #snaplen: 1518
-    data = re.sub(r"(\s*#?snaplen:\s*)(\d+)", rf"\n    snaplen: {str(packet_size)}", data) # Hardcoded -> TODO: Fix
+    
+    data = re.sub(r"(\s*#?max-pending-packets:\s*)(\d+)", rf"\nmax-pending-packets: {str(packet_size)}", data)
     with open(config_path, "w") as file:
         file.write(data)
     # Move it back
     # subprocess.Popen(["sudo", "mv", "suricata.yaml", "/etc/suricata/"])
     # Restart IDS
     #subprocess.Popen(["suricata-update"])
+
     
 
 def change_packet_size_zeek(packet_size):
     # Change config path to match your system (path for elias)
-    config_path = "/usr/local/zeek/share/zeekctl/scripts/zeekctl-config.sh"
+    config_path = "../config/zeek/zeekctl-config.sh"
     if not os.path.exists(config_path): 
         print("Path for Zeek config file not available, have you specified the correct path?")
         return
@@ -229,22 +229,7 @@ def change_packet_size_zeek(packet_size):
     # proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeekctl", "deploy"])
     # time.sleep(20)
     # proc.terminate()
-
-def wait_for_start(ids,interface):
-    if ids == "suricata":
-        while open(f"./{ids}/tmp/temp.log", 'r').read().find("Engine started") < 0:
-            time.sleep(2)
-    elif ids == "snort3":
-        time.sleep(40)
-        # while open(f"./{ids}/tmp/temp.log", 'r').read().find(f"++ [0] {interface}") < 0: 
-        #     time.sleep(2)
     
-    elif ids == "zeek":
-        while open(f"./{ids}/tmp/err.log", 'r').read().find(f"listening on {interface}") < 0: 
-            time.sleep(2)
-    else:
-        raise Exception("Wrong ids assigned.")
-
 
 """
 Arguments for main():
@@ -254,34 +239,36 @@ Step - mbits/s speed index increase per iteration
 Loop - number of times to loop the pcap file
 """
 
-
+# main([512],100,200,100,1)
 def main():
     print("Current Working Directory:", os.getcwd())
     parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
     parser.add_argument("packet_size", help="Choose packet sizes")
     parser.add_argument("interface",help="Which interface should the IDSs be run on?")
     args = parser.parse_args()
-    loop = 10
-    first = 10
-    last = 100
-    step = 20
+    loop = 1
+    first = 100
+    last = 200
+    step = 100
 
     # TODO: Add a sudo su command for root access
     #subprocess.Popen(["sudo", "su"])
     
     
+   
+        
+    
     change_packet_size(args.packet_size)
-    for ids_name in ["zeek"]:
+    for ids_name in ["suricata","snort3","zeek"]:
         for i in range(first,last,step):
-            #TODO: Instead of restarting the IDS for every "speed", keep it running for time save
             print("Running with speed:", i)
             run(ids_name, loop, i, args.packet_size, args.interface)
     
     visualize(args.packet_size)
     # Remove log files from zeek
-    print("Current Working Directory 2:", os.getcwd())
-    subprocess.Popen("rm", "*.log", shell=True)
+    subprocess.Popen(["rm", "./python/system_related/*.log"])
     
 if __name__ == "__main__":
     main()
+
 

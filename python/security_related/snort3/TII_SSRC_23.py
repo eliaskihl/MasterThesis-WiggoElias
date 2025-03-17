@@ -33,8 +33,9 @@ def process_tii_ssrc_23_logs(pcap_file):
 
     # Your replace operation
     df_gt['flow_alerted'] = df_gt['flow_alerted'].replace({'Benign': False, 'Malicious': True})
-    df_gt['proto'] = df_gt['proto'].replace({6.0: 'TCP', 17.0: 'UDP', 0.0: 'HOPOPT'})
-
+    df_gt['proto'] = df_gt['proto'].replace({6.0: 'tcp', 17.0: 'udp', 0.0: 'hopopt'})
+    df_gt['src_port'] = pd.to_numeric(df_gt['src_port'], errors='coerce').astype('Int64')
+    df_gt['dest_port'] = pd.to_numeric(df_gt['dest_port'], errors='coerce').astype('Int64')
 
     column_names = ["timestamp", "pkt_num", "proto", "pkt_gen", "pkt_len", "dir", "src_ap", "dst_ap", "rule", "action"]
 
@@ -43,32 +44,36 @@ def process_tii_ssrc_23_logs(pcap_file):
 
     # Rename 'action' to 'flow_alerted' and set it to True
     df_snort.rename(columns={'action': 'flow_alerted'}, inplace=True)
-    df_snort.to_csv("df_snort_before_mod.csv", index=False)
-
     df_snort['flow_alerted'] = True  # Set all values in flow_alerted to True
 
     # Split 'src_ap' and 'dst_ap' into IP and Port
-    df_snort[['src_ip', 'src_port']] = df_snort['src_ap'].str.split(':', expand=True)
-    df_snort[['dest_ip', 'dest_port']] = df_snort['dst_ap'].str.split(':', expand=True)
+    df_snort[['src_ip', 'src_port']] = df_snort['src_ap'].str.split(':', n=1, expand=True)
+    df_snort[['dest_ip', 'dest_port']] = df_snort['dst_ap'].str.split(':', n=1, expand=True)
 
     # Convert ports to integers for consistency
-    df_snort['src_port'] = pd.to_numeric(df_snort['src_port'], errors='coerce')
-    df_snort['dest_port'] = pd.to_numeric(df_snort['dest_port'], errors='coerce')
+    df_snort['src_port'] = pd.to_numeric(df_snort['src_port'], errors='coerce').astype('Int64')
+    df_snort['dest_port'] = pd.to_numeric(df_snort['dest_port'], errors='coerce').astype('Int64')
     df_snort['proto'] = df_snort['proto'].str.lower()
+    
+    df_snort['proto'] = df_snort['proto'].str.strip()
+    df_snort['src_ip'] = df_snort['src_ip'].str.strip()
+    df_snort['dest_ip'] = df_snort['dest_ip'].str.strip()
     # Keep only the necessary columns
     df_snort = df_snort[['timestamp', 'proto', 'src_ip', 'src_port', 'dest_ip', 'dest_port', 'flow_alerted']]
+    df_snort = df_snort.drop_duplicates(subset=['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto'])
 
-    df_snort.to_csv("df_snort.csv", index=False)
+    # df_gt.to_csv("df_gt.csv", index=False)
+    # df_snort.to_csv("df_snort.csv", index=False)
 
-    df_merged = df_gt.merge(df_snort, on=['proto', 'src_ip', 'src_port', 'dest_ip', 'dest_port'], how='left', suffixes=('_gt', '_snort'))
-    df_merged = df_merged.drop_duplicates(subset=['src_port'], keep='first')
+    df_merged = pd.merge(df_gt, df_snort, how='left', on=['src_ip','src_port','dest_ip','dest_port','proto'],suffixes=('_gt', '_snort'))
+    df_merged['flow_alerted_snort'] = df_merged['flow_alerted_snort'].fillna(False)
 
-    df_merged.to_csv("df_merged.csv", index=False)
+    # df_merged.to_csv("df_merged.csv", index=False)
 
-    df_tp = df_merged[(df_merged["flow_alerted_snort"] == True) & (df_merged["flow_alerted_gt"] == True)]
-    df_tn = df_merged[(df_merged["flow_alerted_snort"] == False) & (df_merged["flow_alerted_gt"] == False)]
-    df_fp = df_merged[(df_merged["flow_alerted_snort"] == True) & (df_merged["flow_alerted_gt"] == False)]
-    df_fn = df_merged[(df_merged["flow_alerted_snort"] == False) & (df_merged["flow_alerted_gt"] == True)]
+    df_tp = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_snort"] == True)]
+    df_tn = df_merged[(df_merged["flow_alerted_gt"] == False) & (df_merged["flow_alerted_snort"] == False)]
+    df_fp = df_merged[(df_merged["flow_alerted_gt"] == False) & (df_merged["flow_alerted_snort"] == True)]
+    df_fn = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_snort"] == False)]
     
 
 

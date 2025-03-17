@@ -6,16 +6,24 @@ from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, r
 from TII_SSRC_23 import process_tii_ssrc_23_logs
 from UNSW_NB15 import process_unsw_nb15_logs
 from BOT_IOT import process_bot_iot_logs
-
+from CIC_IDS2017 import process_cic_ids2017_logs
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from dotenv import load_dotenv, find_dotenv
+
+
 
 def run_dataset(dataset, pcap_path):
+    dotenv_path = find_dotenv()
+    load_dotenv(dotenv_path)
+    snort_path = os.getenv("SNORT_PATH")
+
     dataset_paths = {
         "TII-SSRC-23": "../datasets/TII-SSRC-23",
         "UNSW-NB15": "../datasets/UNSW-NB15",
-        "BOT-IOT": "../datasets/BOT-IOT"
+        "BOT-IOT": "../datasets/BOT-IOT",
+        "CIC-IDS2017": "../datasets/CIC-IDS2017"
     }
     
     if dataset not in dataset_paths:
@@ -28,7 +36,7 @@ def run_dataset(dataset, pcap_path):
     elif os.path.isdir(full_path):
         pcap_files = [os.path.join(full_path, f) for f in os.listdir(full_path) if f.endswith(".pcap")]
     else:
-        raise FileNotFoundError(f"PCAP file or folder not found: {full_path}")
+        raise FileNotFoundError(f"PCAP file or folderprocess_cic_ids2017_logs not found: {full_path}")
 
     # If multiple PCAP files exist, merge them
     if len(pcap_files) > 1:
@@ -39,10 +47,15 @@ def run_dataset(dataset, pcap_path):
 
     # Run Snort on the merged PCAP file
     pcap_file = pcap_files[0]
-    print(f"Processing: {pcap_file}")
-
-    cmd = ["snort", "-c", "./config/snort.lua", "-r", pcap_file, "-l", "./"]
-    process = subprocess.Popen(cmd)
+    print(f"\nRunning Snort3\n")
+    print(f"Dataset: {dataset}")
+    print(f"Pcap: {pcap_path}")
+    print("Processing..")
+    temp = open(f"./tmp/temp.log", "w")
+    err = open(f"./tmp/err.log", "w")
+    
+    cmd = [snort_path, "-c", "../../config/snort3/snort.lua", "-r", pcap_file, "-l", "./"]
+    process = subprocess.Popen(cmd,stdout=temp, stderr=err)
     process.wait()
 
     # Process logs once after Snort runs on all files together
@@ -58,6 +71,8 @@ def process_logs(dataset, pcap_file):
         tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_tii_ssrc_23_logs(pcap_file)
     elif dataset == "BOT-IOT":
         tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_bot_iot_logs(pcap_file)
+    elif dataset == "CIC-IDS2017":
+        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_cic_ids2017_logs(pcap_file)
     else:
         print(f"No processing logic available for the dataset: {dataset}")
     
@@ -81,7 +96,6 @@ def print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_
         ["F1 Score", f"{f1:.4f}"]
     ]
 
-    print(f"\n Pcap File: {pcap_file}")
     print("=" * 40)
     print(tabulate(table, headers=["Metric", "Value"], tablefmt="grid"))
 
@@ -111,7 +125,7 @@ def print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_
 
 def main():
     parser = argparse.ArgumentParser(description="Run Snort on a specified dataset and PCAP file/folder.")
-    parser.add_argument("dataset", choices=["TII-SSRC-23", "UNSW-NB15", "BOT-IOT"], help="Choose a dataset")
+    parser.add_argument("dataset", choices=["TII-SSRC-23", "UNSW-NB15", "BOT-IOT", "CIC-IDS2017"], help="Choose a dataset")
     parser.add_argument("pcap_path", help="Specify a PCAP file or folder name within the dataset")
     args = parser.parse_args()
     run_dataset(args.dataset, args.pcap_path)

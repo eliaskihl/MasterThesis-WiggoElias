@@ -33,16 +33,19 @@ def process_unsw_nb15_logs(pcap_file):
     df_snort['flow_alerted'] = True  # Set all values in flow_alerted to True
 
     # Split 'src_ap' and 'dst_ap' into IP and Port
-    df_snort[['src_ip', 'src_port']] = df_snort['dst_ap'].str.split(':', expand=True)
-    df_snort[['dest_ip', 'dest_port']] = df_snort['src_ap'].str.split(':', expand=True)
+    df_snort[['src_ip', 'src_port']] = df_snort['src_ap'].str.split(':', n=1, expand=True)
+    df_snort[['dest_ip', 'dest_port']] = df_snort['dst_ap'].str.split(':', n=1, expand=True)
 
+    df_snort['src_ip'] = df_snort['src_ip'].replace('', pd.NA)
+
+    df_snort['dest_ip'] = df_snort['dest_ip'].replace('', pd.NA)
     # Convert ports to integers for consistency
     df_snort['src_port'] = pd.to_numeric(df_snort['src_port'], errors='coerce')
     df_snort['dest_port'] = pd.to_numeric(df_snort['dest_port'], errors='coerce')
     df_snort['proto'] = df_snort['proto'].str.lower()
     # Keep only the necessary columns
-    df_snort = df_snort[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'flow_alerted']]  # Keep only necessary columns
-
+    df_snort = df_snort[['timestamp','src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'flow_alerted']]  # Keep only necessary columns
+    df_snort.to_csv("df_snort.csv")
     df_snort['src_port'] = pd.to_numeric(df_snort['src_port'], errors='coerce')
     df_snort['dest_port'] = pd.to_numeric(df_snort['dest_port'], errors='coerce')
     df_snort['src_ip'] = df_snort['src_ip'].str.strip()
