@@ -64,7 +64,7 @@ def run(ids_name, loop, speed, pac_size, interface):
             ["sudo", "/usr/local/snort/bin/snort", "-c", "./snort3/config/snort.lua", "-i", "eth0"], stdout=temp, stderr=err)
         
     elif ids_name == "zeek": # TODO Change the /usr/local/zeek/bin/zeekctl command to zeekctl?
-        ids_proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeek", "-i", interface, "-C"], stdout=temp, stderr=err)
+        ids_proc = subprocess.Popen(["sudo", "/usr/local/zeek/bin/zeek", "-i", interface, "-C", "/usr/local/zeek/share/zeek/test-all-policy.zeek"], stdout=temp, stderr=err)
     # Wait for the IDS to send a start "signal"
     wait_for_start(ids_name, interface)
     #time.sleep(120) # Give the process 40 seconds to intitate.
@@ -126,8 +126,13 @@ def extract_drop_rate_zeek():
     
 
 def extract_drop_rate_snort():
+    drop_rate = 0.0
+    total_packets = 0
     log = "./snort3/tmp/temp.log"
     # Find line with "dropped" and "received"
+    # Wait for line to appear
+    while open(f"./snort3/tmp/temp.log", 'r').read().find(f"daq") < 0:
+        time.sleep(2)
     with open(log, "r") as file:
         for line in file:
             
@@ -198,8 +203,8 @@ def change_packet_size_suricata(packet_size):
     # Search for line to change with re
     with open(config_path, "r") as file:
         data = file.read()
-    
-    data = re.sub(r"(\s*#?max-pending-packets:\s*)(\d+)", rf"\nmax-pending-packets: {str(packet_size)}", data)
+    #snaplen: 1518
+    data = re.sub(r"(\s*#?snaplen:\s*)(\d+)", rf"\n    snaplen: {str(packet_size)}", data) # Hardcoded -> TODO: Fix
     with open(config_path, "w") as file:
         file.write(data)
     # Move it back
@@ -230,7 +235,7 @@ def wait_for_start(ids,interface):
         while open(f"./{ids}/tmp/temp.log", 'r').read().find("Engine started") < 0:
             time.sleep(2)
     elif ids == "snort3":
-        time.sleep(30)
+        time.sleep(40)
         # while open(f"./{ids}/tmp/temp.log", 'r').read().find(f"++ [0] {interface}") < 0: 
         #     time.sleep(2)
     
@@ -257,24 +262,25 @@ def main():
     parser.add_argument("interface",help="Which interface should the IDSs be run on?")
     args = parser.parse_args()
     loop = 10
-    first = 20
-    last = 200
-    step = 10
+    first = 10
+    last = 100
+    step = 20
 
     # TODO: Add a sudo su command for root access
     #subprocess.Popen(["sudo", "su"])
     
     
     change_packet_size(args.packet_size)
-    for ids_name in ["snort3","suricata","zeek"]:
+    for ids_name in ["zeek"]:
         for i in range(first,last,step):
+            #TODO: Instead of restarting the IDS for every "speed", keep it running for time save
             print("Running with speed:", i)
             run(ids_name, loop, i, args.packet_size, args.interface)
     
     visualize(args.packet_size)
     # Remove log files from zeek
     print("Current Working Directory 2:", os.getcwd())
-    subprocess.Popen(["rm *.log"])
+    subprocess.Popen("rm", "*.log", shell=True)
     
 if __name__ == "__main__":
     main()
