@@ -59,28 +59,28 @@ def visualize(size):
     
     width,height = 8,6
     df.plot(x="Speed", y=["CPU_suricata", "CPU_snort3","CPU_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort3", "Zeek"])
-    plt.title(f"CPU Usage : Packet Size: {size}")
+    plt.title(f"CPU Usage : Snaplen: {size}")
     plt.ylabel("CPU (%)")
     plt.xlabel("Speed (mbit/s)")
     print("Saving plot CPU")
     plt.savefig(f"../../img/{size}/cpu.png")
 
     df.plot(x="Speed", y=["Memory_suricata", "Memory_snort3","Memory_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort3", "Zeek"])
-    plt.title(f"Memory Usage : Packet Size: {size}")
+    plt.title(f"Memory Usage : Snaplen: {size}")
     plt.ylabel("Memory (%)")
     plt.xlabel("Speed (mbit/s)")
     print("Saving plot Memory")
     plt.savefig(f"../../img/{size}/memory.png")
     
     df.plot(x="Speed", y=["Drop Rate_suricata", "Drop Rate_snort3","Drop Rate_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort3", "Zeek"])
-    plt.title(f"Drop Rate : Packet Size: {size}")
+    plt.title(f"Drop Rate : Snaplen: {size}")
     plt.ylabel("Drop Rate (%)")
     plt.xlabel("Speed (mbit/s)")
     print("Saving plot Drop Rate")
     plt.savefig(f"../../img/{size}/drop_rate.png")
 
     df.plot(x="Speed", y=["Packet Analysis Rate_suricata", "Packet Analysis Rate_snort3","Packet Analysis Rate_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort3", "Zeek"])
-    plt.title(f"Packet Analysis Rate Packet Size: {size}")
+    plt.title(f"Packet Analysis Rate Snaplen: {size}")
     plt.ylabel("Packet Analysis Rate (%)")
     plt.xlabel("Speed (mbit/s)")
     print("Saving plot Packet Analysis Rate")
