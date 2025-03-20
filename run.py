@@ -20,6 +20,10 @@ TOOLS = {
         "dir": "python/system_related",
         "script": "run_all.py",
     },
+    "syspar": {
+        "dir": "python/system_related",
+        "script": "run_par.py",
+    },
 }
 
 parser = argparse.ArgumentParser(description="Run specified security tools from the root directory")
