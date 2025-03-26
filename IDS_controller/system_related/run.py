@@ -22,11 +22,11 @@ import time
 import subprocess
 import psutil
 import csv
-import sys
 import re
+from datetime import datetime
+import glob
 import os
 from threading import Thread
-import argparse
 from dotenv import load_dotenv,find_dotenv
 
 def revert_init_controller():
@@ -168,6 +168,50 @@ def get_zeek_role(cmdline):
     match = re.search(r"-p\s+(logger-(\d+)|manager|proxy-(\d+)|worker-(\d+))",cmdline)
     return match.group(1) if match else "Unknown"
 
+
+def extract_drop_rate_zeekctl():
+    # go to usr local zeek logs
+    # go to today
+    # unzip all
+    # go to stats log
+    # 
+    # remove all
+    # Comments out the required lines for Zeekctl to begin
+    
+    today = datetime.today().strftime("%Y-%m-%d")
+    print(today)
+    stats_path = f"/usr/local/zeek/logs/{str(today)}/stats.*.log.gz"
+    file_paths = glob.glob(stats_path)
+    print(file_paths)
+    roles = {}
+    for path in file_paths:
+        print(path)
+        subprocess.run(["sudo", "gzip", "-d", path])
+        with open(path.replace(".gz",""), "r") as file:
+            for line in file:
+                
+                if line.startswith("#") or not line.strip():
+                    continue  # Skip metadata lines
+                # Fields are seperated by tabs
+                fields = line.strip().split("\t")  # Fields are tab-separated
+                role = fields[1]
+                pkts_proc = 0 if int(fields[3]) == "-" else int(fields[3])
+                pkts_dropped = 0 if fields[5] == "-" else int(fields[5])
+                # Update roles dict with Role: (Processed packets, Dropped packets)
+                roles.update({role:(pkts_proc,pkts_dropped)})
+        
+    # Remove all logs
+    directory = f"/usr/local/zeek/logs/{today}/*"  # Change this to your target directory
+
+    # Get all files in the directory
+
+
+    subprocess.run(f"sudo rm -rf {directory}", shell=True, check=True)
+    
+    return roles     
+
+
+
 def log_performance(log_file,tcp_proc):
     
     # Logs CPU & memory usage of the IDS process every 5 seconds 
@@ -175,7 +219,7 @@ def log_performance(log_file,tcp_proc):
         # Writes to csv
         writer = csv.writer(f)
         writer.writerow(["Time","Role", "CPU_Usage", "Memory_Usage"])  # CSV header
-        psutil.cpu_percent(interval=10)
+        psutil.cpu_percent(interval=1)
         while tcp_proc.poll() is None:
             # Find the process by name
            
@@ -258,13 +302,24 @@ def run(interface, speed, loop):
     # End / join thread
     print("Terminating monitor thread")
     monitor_thread.join()
-
-    exit(1)
-    drop_rate, total_packets = extract_drop_rate_zeek()
+    time.sleep(10)
+    dict_for_drop_rates = extract_drop_rate_zeekctl() # Return a dictionary with all roles and their respective total packets and dropped packet as a tuple 
     # Write drop rate to file
-    with open(f"./zeekctl/perf_files_{pac_size}/drop_rate_{speed}.txt", "w") as f:
-        f.write(str(drop_rate))
-    with open(f"./zeekctl/perf_files_{pac_size}/total_packets_{speed}.txt", "w") as f:
-        f.write(str(total_packets))
+    for role, packets_tuple in dict_for_drop_rates.items():
+        total_packets,dropped_packets = packets_tuple 
+        drop_rate = 0 if total_packets <= 0 else  dropped_packets/total_packets
+        with open(f"./zeekctl/perf_files/drop_rate_{role}_{speed}.txt", "w") as f:
+            f.write(str(drop_rate))
+        with open(f"./zeekctl/perf_files/total_packets_{role}_{speed}.txt", "w") as f:
+            f.write(str(total_packets))
+    # init_controller()
+# deploy_logger(1)
+# deploy_manager()
+# deploy_proxy(1)
+# deploy_worker(2,"eth0")
 
-run("eth0",20,10)
+
+
+for i in range(20,81,10):
+    run("eth0",i,10)
+
