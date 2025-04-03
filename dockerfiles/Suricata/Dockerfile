@@ -1,0 +1,64 @@
+# For running
+# docker run -d --name suricata-container --cap-add=NET_ADMIN suricata suricata -c /src/suricata-7.0.2/suricata.yaml -i eth0
+
+# Builds Suricata Dalton agent using Suricata source tarball
+FROM ubuntu:24.04
+
+ARG SURI_VERSION
+ARG ENABLE_RUST
+
+# tcpdump is for pcap analysis; not *required* for
+#  the agent but nice to have....
+# changing the python3.8 package to python3 python3-dev and python3-pip
+# hadolint ignore=DL3008
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    python3 python3-dev python3-pip python3-yaml python3-requests \
+    tcpdump \
+    libpcre3 libpcre3-dbg libpcre3-dev libnss3-dev \
+    build-essential autoconf automake libtool libpcap-dev libnet1-dev \
+    libyaml-0-2 libyaml-dev zlib1g zlib1g-dev libcap-ng-dev libcap-ng0 \
+    make libmagic-dev libjansson-dev libjansson4 pkg-config rustc cargo \
+    liblua5.1-dev libevent-dev libpcre2-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# for debugging agent
+#RUN apt-get install -y less nano
+# Install PyYAML (fix for Suricata rules installation)
+# RUN pip3 install --no-cache-dir pyyaml requests
+# download, build, and install Suricata from source
+RUN mkdir -p /src/suricata-${SURI_VERSION}
+WORKDIR /src
+ADD https://www.openinfosecfoundation.org/download/suricata-${SURI_VERSION}.tar.gz suricata-${SURI_VERSION}.tar.gz
+RUN tar -zxf suricata-${SURI_VERSION}.tar.gz -C suricata-${SURI_VERSION} --strip-components=1
+WORKDIR /src/suricata-${SURI_VERSION}
+RUN ./configure && make -j $(nproc) && make install-full
+# Note: Some Suricata versions between 2.0 and 5.0 won't compile on newer linux kernels (like
+# Ubuntu 20.04) without some patching/tweaking, which is why this Dockerfile uses Ubuntu 18.04.
+# However, this line will patch the Suricata code sufficiently to get Suricata compile on newer
+# kernel that Ubuntu 20.04 uses.  Keeping it here for if/when it is needed.
+# Ref: https://github.com/OISF/suricata/pull/4057/files
+# RUN if [ -n "$(echo $SURI_VERSION | grep -P '^[0-4]\x2E')" ] && [ -z "$(grep '#include <linux/sockios.h>' 'src/source-af-packet.c')" ]; then \
+#        sed -i 's|#ifdef HAVE_AF_PACKET|#ifdef HAVE_AF_PACKET\n\n#if HAVE_LINUX_SOCKIOS_H\n#include <linux/sockios.h>\n#endif\n|' src/source-af-packet.c; \
+#    fi;
+# configure, make, and install
+# hadolint ignore=SC2046
+RUN ./configure --enable-profiling ${ENABLE_RUST} --enable-lua && make -j $(nproc) && make install && make install-conf && ldconfig
+# Dalton Agent Stuff
+
+# RUN mkdir -p /opt/dalton-agent/
+# WORKDIR /opt/dalton-agent
+# COPY dalton-agent.py /opt/dalton-agent/dalton-agent.py
+# COPY dalton-agent.conf /opt/dalton-agent/dalton-agent.conf
+
+# COPY http.lua /opt/dalton-agent/http.lua
+# COPY dns.lua /opt/dalton-agent/dns.lua
+# COPY tls.lua /opt/dalton-agent/tls.lua
+
+# RUN sed -i 's/REPLACE_AT_DOCKER_BUILD-VERSION/'"${SURI_VERSION}"'/' /opt/dalton-agent/dalton-agent.conf
+
+#CMD ["python3", "/opt/dalton-agent/dalton-agent.py", "-c", "/opt/dalton-agent/dalton-agent.conf"]
+# CMD ["suricata", "-c", "/usr/local/etc/suricata/suricata.yaml", "-i", "eth0"] 
+CMD ["bin/bash"]
