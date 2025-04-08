@@ -82,6 +82,7 @@ def deploy_worker(num, interface):
         new_lines.append("type=worker\n")
         new_lines.append("host=localhost\n")
         new_lines.append(f"interface={interface}\n")
+        new_lines.append("zeek_args=-C\n")
     with open(filepath,"a") as file:
         file.writelines(new_lines)       
         
@@ -170,13 +171,6 @@ def get_zeek_role(cmdline):
 
 
 def extract_drop_rate_zeekctl():
-    # go to usr local zeek logs
-    # go to today
-    # unzip all
-    # go to stats log
-    # 
-    # remove all
-    # Comments out the required lines for Zeekctl to begin
     
     today = datetime.today().strftime("%Y-%m-%d")
     print(today)
@@ -198,31 +192,37 @@ def extract_drop_rate_zeekctl():
                 pkts_proc = 0 if int(fields[3]) == "-" else int(fields[3])
                 pkts_dropped = 0 if fields[5] == "-" else int(fields[5])
                 # Update roles dict with Role: (Processed packets, Dropped packets)
+                print("role",role,"tot",pkts_proc,"drop",pkts_dropped)
                 roles.update({role:(pkts_proc,pkts_dropped)})
-        
+    
+    time.sleep(5)
     # Remove all logs
     directory = f"/usr/local/zeek/logs/{today}/*"  # Change this to your target directory
-
     # Get all files in the directory
-
-
-    subprocess.run(f"sudo rm -rf {directory}", shell=True, check=True)
-    
+    # subprocess.run(f"sudo rm -rf {directory}", shell=True, check=True)
     return roles     
 
 
 
-def log_performance(log_file,tcp_proc):
+def log_performance(log_file,tcp_proc,interface):
     
+    # Get the starting network statistics (of the interaface)
+    old_net = psutil.net_io_counters(pernic=True)[interface]
+    old_bytes_sent = old_net.bytes_sent
+    old_bytes_recv = old_net.bytes_recv
+
+
     # Logs CPU & memory usage of the IDS process every 5 seconds 
     with open(log_file, "w", newline="") as f:
         # Writes to csv
         writer = csv.writer(f)
-        writer.writerow(["Time","Role", "CPU_Usage", "Memory_Usage"])  # CSV header
-        psutil.cpu_percent(interval=1)
+        writer.writerow(["Time","Role", "CPU_Usage", "Memory_Usage", "Upload_Speed", "Download_Speed"])  # CSV header
+        psutil.cpu_percent(interval=1) # Take the average over 1 second
         while tcp_proc.poll() is None:
+            
+            
+
             # Find the process by name
-           
             for proc in psutil.process_iter(attrs=["pid", "name", "cpu_percent", "memory_info"]):
                 
                 if "zeek" in proc.info["name"].lower():
@@ -237,20 +237,41 @@ def log_performance(log_file,tcp_proc):
                     # Get the total system memory (in bytes)
                     tot_mem = psutil.virtual_memory().total
                     memory_percentage = (rss_mem / tot_mem) * 100
-
+                   
+                    # Get the network statistics (of the interaface)
+                    cur_net = psutil.net_io_counters(pernic=True)[interface]
+                    # Time difference = 5 beacuse of time.sleep(5) below
                     
-                    writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"),role,cpu_usage, memory_percentage])
+                    sent_over_time = (cur_net.bytes_sent - old_bytes_sent) / 5
+                    recv_over_time = (cur_net.bytes_recv - old_bytes_recv) / 5
+                    uploading_speed = sent_over_time / 1024 # Tranfers the speed into kilo bytes
+                    download_speed = recv_over_time / 1024
+
+                    # Update values
+                    old_bytes_sent = cur_net.bytes_sent
+                    old_bytes_recv = cur_net.bytes_recv
+                    
+                    writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"),role,cpu_usage, memory_percentage, uploading_speed, download_speed])
                     f.flush()
 
                     #print(proc.info["name"], ":", proc.info["cpu_percent"],":", memory_percentage, ":", proc.info["pid"])
 
-            time.sleep(5)
+            time.sleep(5) 
             #psutil.process_iter.cache_clear()
     print("Logging complete")
 
 def wait_for_zeekctl():
-    time.sleep(5)
-
+    time.sleep(20)
+def extract_real_drop_rate():
+    total_packets = 0
+    log = "./zeekctl/tmp/temp_tcpreplay.log"
+    with open(log, "r") as file:
+        for line in file:
+            match = re.search(r"Successful packets:\s*(\d+)", line)
+            if match:
+                total_packets = int(match.group(1))   
+                print(f"Total Packets: {total_packets}")
+                return total_packets
 ## Scalability test
 # increase worker/proxy/logger size and throughput
 def run(interface, speed, loop):
@@ -278,9 +299,9 @@ def run(interface, speed, loop):
     with open(f"./zeekctl/tmp/temp_tcpreplay.log", "w") as temp, \
         open(f"./zeekctl/tmp/err_tcpreplay.log", "w") as err:
         print("Current Working Directory:", os.getcwd())
-        tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./python/system_related/pcap/smallFlows.pcap"],stdout=temp, stderr=err)
+        tcpreplay_proc = subprocess.Popen(["sudo", "tcpreplay", "-P", "--stats=1", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./python/system_related/pcap/smallFlows.pcap"],stdout=temp, stderr=err)
     # Log performance in seperate thread while zeekctl is running and until tcpreplay is done
-    monitor_thread = Thread(target=log_performance, args=(filepath, tcpreplay_proc))
+    monitor_thread = Thread(target=log_performance, args=(filepath, tcpreplay_proc,interface))
     monitor_thread.start()
     time.sleep(1)
     # Wait / Terminate tcp replay
@@ -303,23 +324,35 @@ def run(interface, speed, loop):
     print("Terminating monitor thread")
     monitor_thread.join()
     time.sleep(10)
+    # Two methods of extracting the drop rate, which one is the best?
     dict_for_drop_rates = extract_drop_rate_zeekctl() # Return a dictionary with all roles and their respective total packets and dropped packet as a tuple 
     # Write drop rate to file
+    total_packets_var = 0
     for role, packets_tuple in dict_for_drop_rates.items():
         total_packets,dropped_packets = packets_tuple 
-        drop_rate = 0 if total_packets <= 0 else  dropped_packets/total_packets
+        total_packets_var += total_packets
+        drop_rate = 0 if total_packets <= 0 else  (dropped_packets/total_packets)*100
         with open(f"./zeekctl/perf_files/drop_rate_{role}_{speed}.txt", "w") as f:
             f.write(str(drop_rate))
         with open(f"./zeekctl/perf_files/total_packets_{role}_{speed}.txt", "w") as f:
             f.write(str(total_packets))
-    # init_controller()
+    # According to tcp replay the drop rate is higher than zeekctl has recorded
+    acutal_total_packets = extract_real_drop_rate()
+    drop_rate = 1-(total_packets_var/acutal_total_packets)*100
+    print("Actual drop rate:",drop_rate)
+    with open(f"./zeekctl/perf_files/acutal_drop_rate_{speed}.txt", "w") as f:
+            f.write(str(drop_rate))
+# init_controller()
 # deploy_logger(1)
 # deploy_manager()
 # deploy_proxy(1)
-# deploy_worker(2,"eth0")
+# deploy_worker(1,"eth1")
+""" Make sure the worker is on the same interface as below"""
+for i in range(400,401,5):
+    print("Running with speed:",i)
+    run("eth1",i,100)
 
+# for i in range(20,121,20):
+    # run("eth0",i,100)
 
-
-for i in range(20,81,10):
-    run("eth0",i,10)
-
+# TODO: Is it still dropping packets but not telling me
