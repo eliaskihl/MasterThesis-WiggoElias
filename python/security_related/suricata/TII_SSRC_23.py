@@ -1,7 +1,9 @@
+import os
 import pandas as pd
-
+from datetime import datetime
 
 def process_tii_ssrc_23_logs(pcap_file):
+    pd.set_option('future.no_silent_downcasting', True)
 
     pcap_to_gt_map = {
     "../datasets/TII-SSRC-23/pcap/http.pcap": "../datasets/TII-SSRC-23/ground_truth/Video HTTP.csv",
@@ -19,45 +21,51 @@ def process_tii_ssrc_23_logs(pcap_file):
     "Src Port": "src_port",
     "Dst IP": "dest_ip",
     "Dst Port": "dest_port",
-    "Timestamp" : "timestamp",
+    "Timestamp" : "start_time",
     "Protocol": "proto",
     "Label": "flow_alerted",
     }
 
     df_gt.rename(columns=column_mapping, inplace=True)
-
-
-    df_gt = df_gt[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'timestamp', 'proto', 'flow_alerted']]  # Keep only necessary columns
-
-    pd.set_option('future.no_silent_downcasting', True)
+    df_gt = df_gt[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'flow_alerted']]  # Keep only necessary columns
 
     # Your replace operation
     df_gt['flow_alerted'] = df_gt['flow_alerted'].replace({'Benign': False, 'Malicious': True})
     df_gt['proto'] = df_gt['proto'].replace({6.0: 'tcp', 17.0: 'udp', 0.0: 'hopopt'})
     df_gt['src_port'] = pd.to_numeric(df_gt['src_port'], errors='coerce').astype('Int64')
     df_gt['dest_port'] = pd.to_numeric(df_gt['dest_port'], errors='coerce').astype('Int64')
-
-    df_suricata = pd.read_json('./eve.json', lines=True)
+    df_gt['start_time'] = df_gt['start_time'].apply(lambda x: int(datetime.strptime(x, '%d/%m/%Y %I:%M:%S %p').timestamp() - 10800) if pd.notnull(x) else None)
+    
+    log_file = './eve.json'
+    if not os.path.exists(log_file):
+        print(f"Suricata log file not found for {pcap_file}. Skipping...")
+        return
+    df_suricata = pd.read_json(log_file, lines=True)
+    
     df_suricata = df_suricata[df_suricata['event_type'] == 'flow']
     df_suricata["flow_alerted"] = df_suricata["flow"].apply(lambda x: x.get("alerted", False) if isinstance(x, dict) else False)
+    df_suricata['start_time'] = df_suricata['flow'].apply(lambda x: x.get('start') if isinstance(x, dict) else None)
+    df_suricata['start_time'] = df_suricata['start_time'].apply(lambda x: int(datetime.strptime(x[:19], '%Y-%m-%dT%H:%M:%S').timestamp()) if pd.notnull(x) else None)
 
-    df_suricata = df_suricata[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'timestamp', 'proto', 'flow_alerted']]  # Keep only necessary columns
-    df_suricata['src_port'] = pd.to_numeric(df_suricata['src_port'], errors='coerce').astype('Int64')
-    df_suricata['dest_port'] = pd.to_numeric(df_suricata['dest_port'], errors='coerce').astype('Int64')
+    df_suricata = df_suricata[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto','start_time', 'flow_alerted']]  # Keep only necessary columns
     df_suricata['proto'] = df_suricata['proto'].str.lower()
+    df_suricata["src_port"] = pd.to_numeric(df_suricata["src_port"], errors="coerce").astype("Int64")
+    df_suricata["dest_port"] = pd.to_numeric(df_suricata["dest_port"], errors="coerce").astype("Int64")
 
-
-    df_merged = pd.merge(df_gt, df_suricata, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'],suffixes=('_gt', '_suricata'))
+    df_merged = pd.merge(df_gt, df_suricata, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto', 'start_time'],suffixes=('_gt', '_suricata'))
     df_merged['flow_alerted_suricata'] = df_merged['flow_alerted_suricata'].fillna(False)
+
+    # df_suricata.to_csv("df_suricata.csv", index=False) 
+    # df_gt.to_csv("df_gt.csv", index=False) 
+    # df_merged.to_csv("df_merged.csv", index=False) 
 
     df_tp = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_suricata"] == True)]
     df_tn = df_merged[(df_merged["flow_alerted_gt"] == False) & (df_merged["flow_alerted_suricata"] == False)]
     df_fp = df_merged[(df_merged["flow_alerted_gt"] == False) & (df_merged["flow_alerted_suricata"] == True)]
     df_fn = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_suricata"] == False)]
     
-
-
     tot_true_pos = tot_false_pos = tot_false_neg = tot_true_neg = 0
+
     tot_true_pos += len(df_tp)
     tot_false_pos += len(df_fp)
     tot_false_neg += len(df_fn)

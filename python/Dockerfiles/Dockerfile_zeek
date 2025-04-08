@@ -1,0 +1,13 @@
+# Use an official Zeek image
+FROM zeek/zeek:lts
+
+# # Set working directory
+# # WORKDIR /
+
+# # Install dependencies (optional)
+# RUN apt update && apt install -y tcpdump iproute2
+
+# COPY ./start_zeek.sh start_zeek.sh
+
+# # Run Zeek when the container starts
+# CMD ["sudo ./start_zeek.sh"]

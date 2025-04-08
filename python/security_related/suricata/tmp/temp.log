@@ -1,4 +1,7 @@
-i: suricata: This is Suricata version 7.0.8 RELEASE running in USER mode
+i: suricata: This is Suricata version 7.0.10 RELEASE running in USER mode
+W: classification-config: could not open: "usr/local/etc/suricata/classification.config": No such file or directory
+W: detect: No rule files match the pattern /var/lib/suricata/rules/suricata.rules
+W: detect: 1 rule files specified, but no rules were loaded!
 i: threads: Threads created -> RX: 1 W: 16 FM: 1 FR: 1   Engine started.
 i: suricata: Signal Received.  Stopping engine.
 i: pcap: read 1 file, 1800680 packets, 967588583 bytes

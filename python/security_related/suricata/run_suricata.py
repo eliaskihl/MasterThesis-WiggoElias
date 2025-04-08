@@ -56,9 +56,17 @@ def run_dataset(dataset, pcap_path):
 
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
-
-    cmd = ["sudo", suricata_path, "-c", "../../config/suricata/suricata.yaml", "-r", pcap_file, "-l", "./"] #  
-    process = subprocess.Popen(cmd,stdout=temp, stderr=err)
+    command = [
+        "sudo", 
+        "docker", 
+        "exec", 
+        "suricata-container", 
+        "bash", 
+        "-c",  
+        f"cd .. && cd .. && cd usr/local/bin && ./suricata -r ../../{pcap_file} -c ../etc/suricata/suricata.yaml -l ../../../logs"  
+    ]
+    #cmd = ["sudo", suricata_path, "-c", "../../config/suricata/suricata.yaml", "-r", pcap_file, "-l", "./"] #  
+    process = subprocess.Popen(command,stdout=temp, stderr=err)
     process.wait()
     # Process logs once after Suricata runs on all files together
     process_logs(dataset, pcap_file)
@@ -82,19 +90,21 @@ def process_logs(dataset, pcap_file):
     accuracy = (tot_true_pos + tot_true_neg) / (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) if (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) != 0 else 0
     recall = tot_true_pos / (tot_true_pos + tot_false_neg) if (tot_true_pos + tot_false_neg) != 0 else 0
     precision = tot_true_pos / (tot_true_pos + tot_false_pos) if (tot_true_pos + tot_false_pos) != 0 else 0
+    false_positive_rate = tot_false_pos / (tot_false_pos + tot_true_neg) if tot_false_pos != 0 else 0
     f1 = 2 * (precision * recall) / (precision + recall) if precision + recall != 0 else 0
 
-    print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1)
+    print_statistics(tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1, false_positive_rate)
 
-def print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1):
-    """Print statistics in a structured table format."""
+def print_statistics(tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1, false_positive_rate):
+    
     table = [
         ["True Positives", tot_true_pos],
         ["False Positives", tot_false_pos],
         ["False Negatives", tot_false_neg],
         ["True Negatives", tot_true_neg],
         ["Accuracy", f"{accuracy:.4f}"],
-        ["Recall", f"{recall:.4f}"],
+        ["Recall (TPR)", f"{recall:.4f}"],
+        ["FPR", f"{false_positive_rate:.4f}"],
         ["Precision", f"{precision:.4f}"],
         ["F1 Score", f"{f1:.4f}"]
     ]
@@ -135,7 +145,7 @@ def main():
     run_dataset(args.dataset, args.pcap_path)
 
     #Delete files afterwards
-    files_to_delete = ["./eve.json", "./fast.log", "./stats.log", "./suricata.log","./merged.pcap"] 
+    files_to_delete = ["./logs/eve.json", "./logs/fast.log", "./logs/stats.log", "./logs/suricata.log","./logs/keyword_perf.log","./logs/packet_stats.log","./logs/rule_group_perf.log","./logs/rule_perf.log"] 
 
     for file in files_to_delete:
         if os.path.exists(file):  

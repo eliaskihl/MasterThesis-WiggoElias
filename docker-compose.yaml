@@ -1,0 +1,51 @@
+services:
+  zeek:
+    build:
+      context: ./python/Dockerfiles
+      dockerfile: Dockerfile_zeek
+    container_name: zeek-container
+    volumes:
+      - ./python/security_related/datasets:/datasets
+      - ./python/security_related/zeek/logs:/logs
+
+      - ./python/ids_configuration/zeek/config/zeek:/usr/local/zeek/etc
+      - ./python/ids_configuration/zeek/config/zeekctl/zeekctl-config.sh:/usr/local/zeek/spool/zeekctl-config.sh
+      
+      - ./python/ids_configuration/zeek/rules/policy:/usr/local/zeek/share/zeek/policy
+      - ./python/ids_configuration/zeek/rules/test-all-policy.zeek:/usr/local/zeek/share/zeek/test-all-policy.zeek
+
+    network_mode: "host"
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+
+  snort:
+    build:
+      context: ./python/Dockerfiles
+      dockerfile: Dockerfile_snort
+    container_name: snort-container
+    volumes:
+      - ./python/security_related/datasets:/datasets
+      - ./python/security_related/snort/logs:/logs
+      - ./python/ids_configuration/snort/config:/snort/etc/snort
+      - ./python/ids_configuration/snort/rules:/snort/etc/snort/rules
+
+    network_mode: "host"
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+  suricata:
+    build:
+      context: ./python/Dockerfiles
+      dockerfile: Dockerfile_suricata
+    container_name: suricata-container
+    volumes:
+      - ./python/security_related/datasets:/datasets
+      - ./python/security_related/suricata/logs:/logs
+      - ./python/ids_configuration/suricata/config:/usr/local/etc/suricata
+      - ./python/ids_configuration/suricata/rules:/usr/local/var/lib/suricata/rules
+
+    network_mode: "host"
+    command: /bin/bash
+    stdin_open: true
+    tty: true

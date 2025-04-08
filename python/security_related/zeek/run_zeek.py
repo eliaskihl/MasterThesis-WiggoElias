@@ -13,9 +13,9 @@ import numpy as np
 from dotenv import load_dotenv, find_dotenv
 
 def run_dataset(dataset, pcap_path):
-    dotenv_path = find_dotenv()
-    load_dotenv(dotenv_path)
-    zeek_path = os.getenv("ZEEK_PATH")
+    # dotenv_path = find_dotenv()
+    # load_dotenv(dotenv_path)
+    # zeek_path = os.getenv("ZEEK_PATH")
     
     dataset_paths = {
         "TII-SSRC-23": "../datasets/TII-SSRC-23",
@@ -55,8 +55,18 @@ def run_dataset(dataset, pcap_path):
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
     
-    cmd = [zeek_path, "-C", "-r", pcap_file, "/opt/zeek/share/zeek/test-all-policy.zeek"]
-    process = subprocess.Popen(cmd,stdout=temp, stderr=err)
+    #cmd = [zeek_path, "-C", "-r", pcap_file, "/opt/zeek/share/zeek/test-all-policy.zeek"]
+    command = [
+        "sudo", 
+        "docker", 
+        "exec", 
+        "zeek-container", 
+        "bash", 
+        "-c",  # Use shell to run multiple commands
+        f"cd logs && zeek -C -r ../{pcap_file} /usr/local/zeek/share/zeek/test-all-policy.zeek"  # Your commands here
+    ]
+
+    process = subprocess.Popen(command,stdout=temp, stderr=err)
     process.wait()
 
     # Process logs once after Suricata runs on all files together
@@ -67,26 +77,28 @@ def run_dataset(dataset, pcap_path):
 def process_logs(dataset, pcap_file):
     """Process the Suricata logs based on the selected dataset."""
     if dataset == "UNSW-NB15":
-        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_unsw_nb15_logs(pcap_file)
+        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, noAlerts = process_unsw_nb15_logs(pcap_file)
     elif dataset == "TII-SSRC-23":
-        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_tii_ssrc_23_logs(pcap_file)
+        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, noAlerts = process_tii_ssrc_23_logs(pcap_file)
     elif dataset == "BOT-IOT":
-        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_bot_iot_logs(pcap_file)
+        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, noAlerts = process_bot_iot_logs(pcap_file)
     elif dataset == "CIC-IDS2017":
-        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_cic_ids2017_logs(pcap_file)
+        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, noAlerts = process_cic_ids2017_logs(pcap_file)
     else:
         print(f"No processing logic available for the dataset: {dataset}")
     
-
+    if noAlerts: 
+        return
+    
     accuracy = (tot_true_pos + tot_true_neg) / (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) if (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) != 0 else 0
     recall = tot_true_pos / (tot_true_pos + tot_false_neg) if (tot_true_pos + tot_false_neg) != 0 else 0
     precision = tot_true_pos / (tot_true_pos + tot_false_pos) if (tot_true_pos + tot_false_pos) != 0 else 0
-    false_positive_rate = tot_false_pos / (tot_false_pos + tot_true_neg)
+    false_positive_rate = tot_false_pos / (tot_false_pos + tot_true_neg) if tot_false_pos != 0 else 0
     f1 = 2 * (precision * recall) / (precision + recall) if precision + recall != 0 else 0
 
-    print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1, false_positive_rate)
+    print_statistics(tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1, false_positive_rate)
 
-def print_statistics(pcap_file, tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1, false_positive_rate):
+def print_statistics(tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1, false_positive_rate):
     
     table = [
         ["True Positives", tot_true_pos],
@@ -137,12 +149,11 @@ def main():
 
 
 
-    files_in_logs = os.listdir('./')
+    files_in_logs = os.listdir('./logs')
 
     files_to_delete = [file for file in files_in_logs if file.endswith('.log')]
-
     for file in files_to_delete:
-        file_path = os.path.join('./', file)
+        file_path = os.path.join('./logs/', file)
         if os.path.exists(file_path):  
             os.remove(file_path)
     
