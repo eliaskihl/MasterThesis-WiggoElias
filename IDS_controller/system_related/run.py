@@ -356,3 +356,66 @@ for i in range(400,401,5):
     # run("eth0",i,100)
 
 # TODO: Is it still dropping packets but not telling me
+# TODO: Number of closed connections (natural and unnatural)
+
+def find_latency():
+    today = datetime.today().strftime("%Y-%m-%d")
+    today = "2025-03-27" # TODO: Change this
+    stats_path = f"/usr/local/zeek/logs/{str(today)}/cluster.*.log.gz" 
+    file_paths = glob.glob(stats_path)
+    print(file_paths)
+    roles = {}
+    for path in file_paths:
+        print(path)
+        subprocess.run(["sudo", "gzip", "-d", path])
+    
+        temp_dict = {}
+        with open(path.replace(".gz",""), "r") as file:
+            for line in file:
+                # 1743092612.165135	logger-1	got hello from manager (72c0fbec-a4fc-5545-8e6d-2b244618b4fa)
+                # 1743092612.165017	manager	got hello from logger-1 (19dd8eaf-8fba-5797-aead-6263755e69cc)
+
+                if line.startswith("#") or not line.strip():
+                    continue  # Skip metadata lines
+                # Fields are seperated by tabs
+                fields = line.strip().split("\t")  # Fields are tab-separated
+
+                time = fields[0]
+                role = fields[1]
+                message = fields[2]
+                if "from" not in message:
+                    continue
+                # print("0",message)
+                target_role = message.split("from")[-1]
+                # print("1",target_role)
+                target_role = target_role.split(" ")[1]
+                # print("2",target_role)
+                
+                temp_dict[(role,target_role)] = time
+                #print(temp_dict)   
+
+            #Find the pairs in the dict and take the delta time
+        banned = []
+        
+        for outer_tuple,outer_time in temp_dict.items():
+            
+            start = float(outer_time)
+            if outer_tuple in banned: # Skip 
+                continue
+
+            for inner_tuple,inner_time in temp_dict.items():
+                
+                end = float(inner_time)
+                # print("rev:",keys[::-1])
+                if inner_tuple == outer_tuple[::-1]: # Found match
+                
+                    if end > start:
+                        roles[(outer_tuple)] = end-start 
+                    else:
+                        roles[(outer_tuple)] = start-end 
+                    banned.append((inner_tuple)) # Ban the target
+                    break
+        
+        print(roles)
+        return roles # TODO: If this loop is greater than 1 iteration than this will fail
+             
