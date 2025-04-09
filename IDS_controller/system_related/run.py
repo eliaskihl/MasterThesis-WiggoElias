@@ -419,3 +419,4 @@ def find_latency():
         print(roles)
         return roles # TODO: If this loop is greater than 1 iteration than this will fail
              
+#test
