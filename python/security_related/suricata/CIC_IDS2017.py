@@ -41,7 +41,7 @@ def process_cic_ids2017_logs(pcap_file):
     df_gt['start_time'] = df_gt['start_time'].apply(lambda x: int(datetime.strptime(x.split('.')[0], '%Y-%m-%d %H:%M:%S').timestamp() + 7200) if pd.notnull(x) else None)    
     df_gt.to_csv("df_gt.csv")
 
-    log_file = './eve.json'
+    log_file = './logs/eve.json'
     if not os.path.exists(log_file):
         print(f"Suricata log file not found for {pcap_file}. Skipping...")
         return
@@ -60,9 +60,9 @@ def process_cic_ids2017_logs(pcap_file):
     df_merged = pd.merge(df_gt, df_suricata, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto', 'start_time'],suffixes=('_gt', '_suricata'))
     df_merged['flow_alerted_suricata'] = df_merged['flow_alerted_suricata'].fillna(False)
 
-    # df_suricata.to_csv("df_suricata.csv", index=False) 
-    # df_gt.to_csv("df_gt.csv", index=False) 
-    # df_merged.to_csv("df_merged.csv", index=False) 
+    df_gt.to_csv("./tmp/df_gt.csv")
+    df_suricata.to_csv("./tmp/df_suricata.csv")
+    df_merged.to_csv("./tmp/df_merged.csv")
 
     df_tp = df_merged[(df_merged["flow_alerted_gt"] == True) & (df_merged["flow_alerted_suricata"] == True)]
     df_tn = df_merged[(df_merged["flow_alerted_gt"] == False) & (df_merged["flow_alerted_suricata"] == False)]
