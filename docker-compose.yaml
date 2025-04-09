@@ -7,7 +7,8 @@ services:
     volumes:
       - ./python/security_related/datasets:/datasets
       - ./python/security_related/zeek/logs:/logs
-
+      - ./python/system_related/pcap:/pcap
+  
       - ./python/ids_configuration/zeek/config/zeek:/usr/local/zeek/etc
       - ./python/ids_configuration/zeek/config/zeekctl/zeekctl-config.sh:/usr/local/zeek/spool/zeekctl-config.sh
       
@@ -27,6 +28,8 @@ services:
     volumes:
       - ./python/security_related/datasets:/datasets
       - ./python/security_related/snort/logs:/logs
+      - ./python/system_related/pcap:/pcap
+
       - ./python/ids_configuration/snort/config:/snort/etc/snort
       - ./python/ids_configuration/snort/rules:/snort/etc/snort/rules
 
@@ -42,6 +45,8 @@ services:
     volumes:
       - ./python/security_related/datasets:/datasets
       - ./python/security_related/suricata/logs:/logs
+      - ./python/system_related/pcap:/pcap
+
       - ./python/ids_configuration/suricata/config:/usr/local/etc/suricata
       - ./python/ids_configuration/suricata/rules:/usr/local/var/lib/suricata/rules
 
