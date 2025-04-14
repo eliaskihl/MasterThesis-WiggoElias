@@ -25,6 +25,7 @@ def extract_groundtruth(zip_dirs):
                 print(f"Extracted {filename}")
                 os.remove(zip_path)
 
+
 if __name__ == "__main__":
     zip_directories = [
     "./python/security_related/datasets/BOT-IOT/ground_truth",
@@ -32,4 +33,5 @@ if __name__ == "__main__":
     "./python/security_related/datasets/TII-SSRC-23/ground_truth",
     "./python/security_related/datasets/UNSW-NB15/ground_truth"
     ]
-    extract_groundtruth(zip_directories)
+    # extract_groundtruth(zip_directories)
+    install_dependencies()

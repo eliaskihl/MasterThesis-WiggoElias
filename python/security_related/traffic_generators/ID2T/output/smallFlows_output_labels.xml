@@ -1,0 +1,39 @@
+<?xml version="1.0" ?>
+<labels version_parser="0.3">
+	<input>
+		<filename>smallFlows.pcap</filename>
+		<sha256>77d06d3f33f1a95fb9f2610f20ead8ce978449077d6ba22d4945b85bd48f75d1</sha256>
+	</input>
+	<output>
+		<filename>smallFlows_output.pcap</filename>
+		<sha256>75fef0209a04aaf2532e7074d333d0350ad16f168bc78d58e54511195296c243</sha256>
+	</output>
+	<attack>
+		<name>EternalBlueExploit</name>
+		<note></note>
+		<seed>117260874946528955333119513180023644653</seed>
+		<injected_packets>363</injected_packets>
+		<timestamp_start>
+			<timestamp>0.003581728871751088</timestamp>
+			<timestamp_hr>1970-01-01 00:00:00.003582</timestamp_hr>
+		</timestamp_start>
+		<timestamp_end>
+			<timestamp>36.305152985918305</timestamp>
+			<timestamp_hr>1970-01-01 00:00:36.305153</timestamp_hr>
+		</timestamp_end>
+		<parameters>
+			<inject.at-timestamp user_specified="True">0.0</inject.at-timestamp>
+			<inject.after-pkt user_specified="False">9895</inject.after-pkt>
+			<bandwidth.max user_specified="False">0.0</bandwidth.max>
+			<bandwidth.min.local user_specified="False">0.0</bandwidth.min.local>
+			<bandwidth.min.public user_specified="False">0.0</bandwidth.min.public>
+			<mac.src user_specified="True">32:08:24:DC:8D:27</mac.src>
+			<ip.src user_specified="True">192.168.178.2</ip.src>
+			<port.src user_specified="False">34823</port.src>
+			<mac.dst user_specified="False">40:61:86:9a:f1:f5</mac.dst>
+			<ip.dst user_specified="False">192.168.3.131</ip.dst>
+			<port.dst user_specified="False">445</port.dst>
+			<packets.per-second user_specified="False">20.0</packets.per-second>
+		</parameters>
+	</attack>
+</labels>

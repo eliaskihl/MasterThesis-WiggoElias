@@ -1,0 +1,8 @@
+# Use the prebuilt ID2T image as base
+FROM rakahere/id2t
+
+# Optional: Set a working directory
+WORKDIR /ID2T
+
+# Optional: Set default command to bash
+CMD ["/bin/bash"]

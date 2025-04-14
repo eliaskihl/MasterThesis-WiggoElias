@@ -2,14 +2,16 @@ import os
 import pandas as pd
 from datetime import datetime
 
-def process_cic_ids2017_logs(pcap_file):
+def process_suricata_logs_CICIDS2017(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
     
     pcap_to_gt_map = {
-    "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/monday.csv",
-    "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/tuesday.csv",
-    "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/wednesday.csv",
-    }
+    "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+    "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+    "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+    "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+    "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv"
+}
 
     gt_path = pcap_to_gt_map.get(pcap_file) 
     if gt_path:

@@ -8,15 +8,11 @@ services:
       - ./python/security_related/datasets:/datasets
       - ./python/security_related/zeek/logs:/logs
       - ./python/system_related/pcap:/pcap
-  
       - ./python/ids_configuration/zeek/config/zeek:/usr/local/zeek/etc
-      - ./python/ids_configuration/zeek/config/zeekctl/zeekctl-config.sh:/usr/local/zeek/spool/zeekctl-config.sh
-      
       - ./python/ids_configuration/zeek/rules/policy:/usr/local/zeek/share/zeek/policy
       - ./python/ids_configuration/zeek/rules/test-all-policy.zeek:/usr/local/zeek/share/zeek/test-all-policy.zeek
-
     network_mode: "host"
-    command: /bin/bash
+    privileged: true  # Allow privileged mode
     stdin_open: true
     tty: true
 
@@ -29,14 +25,13 @@ services:
       - ./python/security_related/datasets:/datasets
       - ./python/security_related/snort/logs:/logs
       - ./python/system_related/pcap:/pcap
-
       - ./python/ids_configuration/snort/config:/snort/etc/snort
       - ./python/ids_configuration/snort/rules:/snort/etc/snort/rules
-
     network_mode: "host"
-    command: /bin/bash
+    privileged: true  # Allow privileged mode
     stdin_open: true
     tty: true
+
   suricata:
     build:
       context: ./python/Dockerfiles
@@ -46,11 +41,9 @@ services:
       - ./python/security_related/datasets:/datasets
       - ./python/security_related/suricata/logs:/logs
       - ./python/system_related/pcap:/pcap
-
       - ./python/ids_configuration/suricata/config:/usr/local/etc/suricata
       - ./python/ids_configuration/suricata/rules:/usr/local/var/lib/suricata/rules
-
     network_mode: "host"
-    command: /bin/bash
+    privileged: true  # Allow privileged mode
     stdin_open: true
     tty: true

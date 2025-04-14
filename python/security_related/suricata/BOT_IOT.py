@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from datetime import datetime
 
-def process_bot_iot_logs(pcap_file):
+def process_suricata_logs_BOTIOT(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
     
     pcap_to_gt_map = {

@@ -1,107 +1,67 @@
 import subprocess
 import argparse
 import os
-
 from tabulate import tabulate
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
-from TII_SSRC_23 import process_tii_ssrc_23_logs
-from UNSW_NB15 import process_unsw_nb15_logs
-from BOT_IOT import process_bot_iot_logs
-from CIC_IDS2017 import process_cic_ids2017_logs
+from TII_SSRC_23 import process_suricata_logs_TIISSRC23
+from UNSW_NB15 import process_suricata_logs_UNSWNB15
+from BOT_IOT import process_suricata_logs_BOTIOT
+from CIC_IDS2017 import process_suricata_logs_CICIDS2017
+from ID2T import process_suricata_logs_ID2T
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-from dotenv import load_dotenv, find_dotenv
 
-
-def run_dataset(dataset, pcap_path):
-    dotenv_path = find_dotenv()
-    load_dotenv(dotenv_path)
-    suricata_path = os.getenv("SURICATA_PATH")
-
-    dataset_paths = {
-        "TII-SSRC-23": "../datasets/TII-SSRC-23",
-        "UNSW-NB15": "../datasets/UNSW-NB15",
-        "BOT-IOT": "../datasets/BOT-IOT",
-        "CIC-IDS2017": "../datasets/CIC-IDS2017"
-
-    }
-    
-    if dataset not in dataset_paths:
-        raise ValueError("Invalid dataset. Choose from: " + ", ".join(dataset_paths.keys()))
-    
-    full_path = os.path.join(dataset_paths[dataset], "pcap", pcap_path)
-    
-    if os.path.isfile(full_path):
-        pcap_files = [full_path]  
-    elif os.path.isdir(full_path):
-        pcap_files = [os.path.join(full_path, f) for f in os.listdir(full_path) if f.endswith(".pcap")]
-    else:
-        raise FileNotFoundError(f"PCAP file or folder not found: {full_path}")
-
-
-    # If multiple PCAP files exist, merge them
-    if len(pcap_files) > 1:
-        merged_pcap = "./logs/merged.pcap"
-        merge_cmd = ["mergecap", "-w", merged_pcap] + pcap_files
-        subprocess.run(merge_cmd, check=True)
-        pcap_files = [merged_pcap]  # Now only process the merged PCAP
-
-    # Run Suricata on the merged PCAP file
-    pcap_file = pcap_files[0]
-    print(f"\nRunning Suricata\n")
-    print(f"Dataset: {dataset}")
-    print(f"Pcap: {pcap_path}")
-    print("Processing..")
-
+def run_suricata_on_pcap(pcap):
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
-    command = [
+    cmd = [
         "sudo", 
         "docker", 
         "exec", 
         "suricata-container", 
         "bash", 
         "-c",  
-        f"cd .. && cd .. && cd usr/local/bin && ./suricata -r ../../{pcap_file} -c ../etc/suricata/suricata.yaml -l ../../../logs"  
+        f"cd .. && cd .. && cd usr/local/bin && ./suricata -r ../../{pcap} -c ../etc/suricata/suricata.yaml -l ../../../logs"  
     ]
-    #cmd = ["sudo", suricata_path, "-c", "../../config/suricata/suricata.yaml", "-r", pcap_file, "-l", "./"] #  
-    process = subprocess.Popen(command,stdout=temp, stderr=err)
+
+    process = subprocess.Popen(cmd,stdout=temp, stderr=err)
     process.wait()
-    # Process logs once after Suricata runs on all files together
-    process_logs(dataset, pcap_file)
 
-    return dataset, pcap_files
+def run_traffic_generator(traffic_generator, attack):    
+    if traffic_generator == 'ID2T':
+        cmd = [
+            "sudo", 
+            "docker", 
+            "exec", 
+            "id2t-container",  
+            "bash", 
+            "-c",
+            f"./id2t -i ../traffic/input_pcap/smallFlows.pcap -o ../traffic/output/smallFlows_output.pcap -a {attack} ip.src=192.168.178.2 mac.src=32:08:24:DC:8D:27 inject.at-timestamp=0"
+        ]
+        process = subprocess.Popen(cmd)
+        process.wait()
 
-def process_logs(dataset, pcap_file):
-    """Process the Suricata logs based on the selected dataset."""
-    if dataset == "UNSW-NB15":
-        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_unsw_nb15_logs(pcap_file)
-    elif dataset == "TII-SSRC-23":
-        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_tii_ssrc_23_logs(pcap_file)
-    elif dataset == "BOT-IOT":
-        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_bot_iot_logs(pcap_file)
-    elif dataset == "CIC-IDS2017":
-        tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg = process_cic_ids2017_logs(pcap_file)
-    else:
-        print(f"No processing logic available for the dataset: {dataset}")
-    
 
-    accuracy = (tot_true_pos + tot_true_neg) / (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) if (tot_true_pos + tot_true_neg + tot_false_pos + tot_false_neg) != 0 else 0
-    recall = tot_true_pos / (tot_true_pos + tot_false_neg) if (tot_true_pos + tot_false_neg) != 0 else 0
-    precision = tot_true_pos / (tot_true_pos + tot_false_pos) if (tot_true_pos + tot_false_pos) != 0 else 0
-    false_positive_rate = tot_false_pos / (tot_false_pos + tot_true_neg) if tot_false_pos != 0 else 0
+def delete_suricata_logs():
+    files_to_delete = ["./logs/eve.json", "./logs/fast.log", "./logs/stats.log", "./logs/suricata.log","./logs/keyword_perf.log","./logs/packet_stats.log","./logs/rule_group_perf.log","./logs/rule_perf.log","./logs/prefilter_perf.log"] 
+    for file in files_to_delete:
+        if os.path.exists(file):  
+            os.remove(file)
+
+def results(tp, fp, fn, tn):
+    accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) != 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) != 0 else 0
+    precision = tp / (tp + fp) if (tp + fp) != 0 else 0
+    false_positive_rate = fp / (fp + tn) if fp != 0 else 0
     f1 = 2 * (precision * recall) / (precision + recall) if precision + recall != 0 else 0
 
-    print_statistics(tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1, false_positive_rate)
-
-def print_statistics(tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, accuracy, recall, precision, f1, false_positive_rate):
-    
     table = [
-        ["True Positives", tot_true_pos],
-        ["False Positives", tot_false_pos],
-        ["False Negatives", tot_false_neg],
-        ["True Negatives", tot_true_neg],
+        ["True Positives", tp],
+        ["False Positives", fp],
+        ["False Negatives", fn],
+        ["True Negatives", tn],
         ["Accuracy", f"{accuracy:.4f}"],
         ["Recall (TPR)", f"{recall:.4f}"],
         ["FPR", f"{false_positive_rate:.4f}"],
@@ -112,7 +72,6 @@ def print_statistics(tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, a
     print("=" * 40)
     print(tabulate(table, headers=["Metric", "Value"], tablefmt="grid"))
 
-        # Initialize lists to store metrics
     list_acc, list_recall, list_precision, list_f1 = [], [], [], []
 
     list_acc.append(accuracy)
@@ -121,13 +80,13 @@ def print_statistics(tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, a
     list_f1.append(f1)
     
     # Visualize with seaborn
-    cm = np.array([[tot_true_pos, tot_false_neg],[tot_false_pos, tot_true_neg]])
-    labels = ['True Pos','False Neg','False Pos','True Neg']
-    labels = np.asarray(labels).reshape(2,2)
-    sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-    plt.show()
+    # cm = np.array([[tot_true_pos, tot_false_neg],[tot_false_pos, tot_true_neg]])
+    # labels = ['True Pos','False Neg','False Pos','True Neg']
+    # labels = np.asarray(labels).reshape(2,2)
+    # sns.heatmap(cm, annot=True, fmt='', cmap='Blues')
+    # plt.xlabel("Predicted")
+    # plt.ylabel("Actual")
+    # plt.show()
     # plt.plot(list_acc, label='Accuracy')
     # plt.plot(list_recall, label='Recall')
     # plt.plot(list_precision, label='Precision')
@@ -138,18 +97,64 @@ def print_statistics(tot_true_pos, tot_false_pos, tot_false_neg, tot_true_neg, a
     # plt.show()
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Suricata on a specified dataset and PCAP file/folder.")
-    parser.add_argument("dataset", choices=["TII-SSRC-23", "UNSW-NB15","BOT-IOT", "CIC-IDS2017"], help="Choose a dataset")
-    parser.add_argument("pcap_path", help="Specify a PCAP file or folder name within the dataset")
-    args = parser.parse_args()
-    run_dataset(args.dataset, args.pcap_path)
-
-    #Delete files afterwards
-    files_to_delete = ["./logs/eve.json", "./logs/fast.log", "./logs/stats.log", "./logs/suricata.log","./logs/keyword_perf.log","./logs/packet_stats.log","./logs/rule_group_perf.log","./logs/rule_perf.log"] 
-
-    for file in files_to_delete:
-        if os.path.exists(file):  
-            os.remove(file)
+    parser = argparse.ArgumentParser(description="Run Suricata with a dataset or traffic generator")
     
+    # Create two main option groups
+    data_group = parser.add_argument_group("Dataset options")
+    data_group.add_argument("--dataset", choices=["TII-SSRC-23", "UNSW-NB15", "BOT-IOT", "CIC-IDS2017"], 
+                           help="Choose a dataset")
+    data_group.add_argument("--pcap", help="Specify a PCAP file from the dataset")
+    
+    generator_group = parser.add_argument_group("Traffic generator options")
+    generator_group.add_argument("--traffic-generator", choices=["ID2T"], help="Choose a traffic generator")
+    generator_group.add_argument("--attack", help="Specify an attack for traffic generation")
+    
+    args = parser.parse_args()
+    
+    # To run traffic generators (attacks = DDoS Attack, EternalBlue Exploit, FTPWinaXe Exploit, JoomlaRegPrivesc Exploit, MS17ScanAttack,  
+    # Memcrashed Attack (Spoofer side), P2P Botnet Communication (P2PBotnet), Portscan Attack, SMBLoris Attack, SMBScan Attack, SQLi Attack, 
+    # Sality Botnet)
+    if args.traffic_generator:
+        run_traffic_generator(args.traffic_generator, args.attack)
+        if args.traffic_generator == 'ID2T':
+            run_suricata_on_pcap('../traffic_generators/ID2T/output/smallFlows_output.pcap')
+
+            tp, fp, fn, tn, noAlerts = process_suricata_logs_ID2T()
+
+
+    # To run datasets
+    else:
+        dataset_mapping = {
+        "TII-SSRC-23": "../datasets/TII-SSRC-23",
+        "UNSW-NB15": "../datasets/UNSW-NB15",
+        "BOT-IOT": "../datasets/BOT-IOT",
+        "CIC-IDS2017": "../datasets/CIC-IDS2017"
+        }
+        if args.dataset not in dataset_mapping:
+            raise ValueError("Invalid dataset. Choose from: " + ", ".join(dataset_mapping.keys()))
+        
+        path_to_pcap = os.path.join(dataset_mapping[args.dataset], "pcap", args.pcap)
+        
+        run_suricata_on_pcap(path_to_pcap)
+        
+        if args.dataset == "UNSW-NB15":
+            tp, fp, fn, tn, noAlerts = process_suricata_logs_UNSWNB15(path_to_pcap)
+        elif args.dataset == "TII-SSRC-23":
+            tp, fp, fn, tn, noAlerts = process_suricata_logs_TIISSRC23(path_to_pcap)
+        elif args.dataset == "BOT-IOT":
+            tp, fp, fn, tn, noAlerts = process_suricata_logs_BOTIOT(path_to_pcap)
+        elif args.dataset == "CIC-IDS2017":
+            tp, fp, fn, tn, noAlerts = process_suricata_logs_CICIDS2017(path_to_pcap)
+        else:
+            print(f"No processing logic available for the dataset: {args.dataset}")
+    
+    delete_suricata_logs()
+
+    if noAlerts: 
+        return
+    else:
+        results(tp, fp, fn, tn)
+
+
 if __name__ == "__main__":
     main()

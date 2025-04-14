@@ -24,6 +24,11 @@ TOOLS = {
         "dir": "python/system_related",
         "script": "run_par.py",
     },
+    "controller": {
+        "dir": "IDS_controller/system_related",
+        "script": "run.py",
+    },
+
 }
 
 parser = argparse.ArgumentParser(description="Run specified security tools from the root directory")
@@ -42,4 +47,3 @@ script = tool_info["script"]
 
 command = ["python", script] + args.args 
 subprocess.run(command, cwd=nested_dir)
-

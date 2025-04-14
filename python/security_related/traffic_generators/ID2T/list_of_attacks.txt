@@ -1,0 +1,137 @@
+* DDoS Attack
+        - Description: Injects a DDoS attack'
+        - Type: Resource Exhaustion
+        - Supported Parameters: 
+         + | attack.duration | 
+         + | attackers.count | 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | 
+         + | latency.max | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+         + | port.dst | port.src | 
+         + | victim.buffer | 
+* EternalBlue Exploit
+        - Description: Injects an EternalBlue exploit'
+        - Type: Privilege elevation
+        - Supported Parameters: 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+         + | port.dst | port.src | 
+* FTPWinaXe Exploit
+        - Description: Injects a WinaXe 7.7 FTP buffer overflow.
+        - Type: Privilege elevation
+        - Supported Parameters: 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | custom.payload | custom.payload.file | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | ip.src.shuffle | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+* JoomlaRegPrivesc Exploit
+        - Description: Injects an JoomlaRegPrivesc exploit'
+        - Type: Privilege elevation
+        - Supported Parameters: 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+         + | port.dst | 
+         + | target.host | 
+* MS17ScanAttack
+        - Description: Injects a MS17 scan'
+        - Type: Scanning/Probing
+        - Supported Parameters: 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+         + | port.dst | port.src | 
+* Memcrashed Attack (Spoofer side)
+        - Description: Injects the spoofer-side of a Memcached amplification attack
+        - Type: Resource Exhaustion
+        - Supported Parameters: 
+         + | attack.duration | 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | ip.victim | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+* P2P Botnet Communication (P2PBotnet)
+        - Description: Injects P2P Botnet Communication
+        - Type: Botnet communication
+        - Supported Parameters: 
+         + | attack.duration | 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | bots.count | 
+         + | file.csv | file.xml | 
+         + | hidden_mark | 
+         + | inject.after-pkt | inject.at-timestamp | inject.ip | 
+         + | interval.selection.end | interval.selection.start | interval.selection.strategy | 
+         + | ip.reuse.external | ip.reuse.local | ip.reuse.total | 
+         + | multiport | 
+         + | nat.present | 
+         + | packet.padding | 
+         + | packets.limit | 
+         + | ttl.from.caida | 
+* Portscan Attack
+        - Description: Injects a nmap 'regular scan'
+        - Type: Scanning/Probing
+        - Supported Parameters: 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | ip.src.shuffle | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+         + | port.dst | port.dst.order-desc | port.dst.shuffle | port.open | port.src | port.src.shuffle | 
+* SMBLoris Attack
+        - Description: Injects an SMBLoris (D)DoS Attack
+        - Type: Resource Exhaustion
+        - Supported Parameters: 
+         + | attack.duration | 
+         + | attackers.count | 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+* SMBScan Attack
+        - Description: Injects an SMB scan
+        - Type: Scanning/Probing
+        - Supported Parameters: 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | hosting.ip | hosting.percentage | hosting.version | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | ip.src.shuffle | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+         + | port.src | port.src.shuffle | 
+         + | protocol.version | 
+         + | src.platform | 
+         + | target.count | 
+* SQLi Attack
+        - Description: Injects a SQLi attack'
+        - Type: Privilege elevation
+        - Supported Parameters: 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.dst | ip.src | 
+         + | mac.dst | mac.src | 
+         + | packets.per-second | 
+         + | port.dst | 
+         + | target.host | 
+* Sality Botnet
+        - Description: Injects an Sality botnet'
+        - Type: Botnet
+        - Supported Parameters: 
+         + | bandwidth.max | bandwidth.min.local | bandwidth.min.public | 
+         + | inject.after-pkt | inject.at-timestamp | 
+         + | ip.src | 
+         + | mac.src | 
+         + | packets.per-second | 

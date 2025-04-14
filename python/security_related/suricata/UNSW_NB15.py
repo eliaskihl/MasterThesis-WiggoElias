@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from datetime import datetime
 
-def process_unsw_nb15_logs(pcap_file):
+def process_suricata_logs_UNSWNB15(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
 
     pcap_to_gt_map = {
