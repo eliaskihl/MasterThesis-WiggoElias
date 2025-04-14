@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import sys
 
-def process_bot_iot_logs(pcap_file):
+def process_snort_logs_BOTIOT(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
     
     pcap_to_gt_map = {

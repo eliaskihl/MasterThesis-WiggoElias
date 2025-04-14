@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime
 
-def process_tii_ssrc_23_logs(pcap_file):
+def process_snort_logs_TIISSRC23(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
 
     pcap_to_gt_map = {
