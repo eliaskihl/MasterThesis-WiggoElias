@@ -3,7 +3,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import glob
 import os
-from suricata.vis_csv import calc_mean
+
+def calc_mean(ids_performance_log):
+    df = pd.read_csv(ids_performance_log)    
+    # filter out rows that have cpu_usage between 0.0 and 2.0
+    df = df[df["CPU_Usage (%)"] > 2.0]
+    # Extract seconds part of time "2025-02-26 12:39:22"
+    
+    cpu_usage = df["CPU_Usage (%)"]
+    mem_usage = df["Memory_Usage (%)"]
+    # take the average of the cpu_usage and mem_usage
+    cpu_usage = cpu_usage.mean()
+    mem_usage = np.round(mem_usage.mean(),1)
+    # Round decimals of mem_usage array
+    return cpu_usage, mem_usage
+
 def visualize(size):
     speeds = []
     cpus = []
