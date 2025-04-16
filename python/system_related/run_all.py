@@ -69,23 +69,23 @@ def log_performance(log_file, process_name,tcp_proc):
         # Writes to csv
         writer = csv.writer(f)
         writer.writerow(["Time", "CPU_Usage (%)", "Memory_Usage (%)"])  # CSV header
-        psutil.cpu_percent(interval=1)
+        psutil.cpu_percent(interval=10)
         while tcp_proc.poll() is None:
             # Find the process by name
+            total_cpu = 0
+            total_mem = 0
             for proc in psutil.process_iter(attrs=["pid", "name", "cpu_percent", "memory_info"]):
-                
-                
+    
                 if process_name in proc.info["name"].lower():
-                    print("yooo",proc.info["name"])
-                    cpu_usage = proc.info["cpu_percent"]
-                    rss_mem = proc.info["memory_info"].rss # rss mem in bytes?
-                    # Get the total system memory (in bytes)
-                    tot_mem = psutil.virtual_memory().total
-                    memory_percentage = (rss_mem / tot_mem) * 100
-
                     
-                    writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), cpu_usage, memory_percentage])
-                    f.flush()
+                    total_cpu += proc.info["cpu_percent"]       # Because Suricata is multithreaded it has multiple processes which need to be added togheter
+                    total_mem += proc.info["memory_info"].rss
+
+            tot_mem = psutil.virtual_memory().total
+            memory_percentage = (total_mem / tot_mem) * 100
+                    
+            writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), total_cpu, memory_percentage])
+            f.flush()
 
                     #print(proc.info["name"], ":", proc.info["cpu_percent"],":", memory_percentage, ":", proc.info["pid"])
 
@@ -148,7 +148,8 @@ def run(ids_name, loop, speed, interface):
         wait_for_zeek()
     
     if ids_name == "snort":
-        time.sleep(20)      # TODO: change from sleep to something else - Give the process 10 seconds to intitate.
+        time.sleep(30)      # TODO: change from sleep to something else - Give the process 10 seconds to intitate.
+                            # TODO: Maybe this should be scaled with the throughput for all IDSs.
 
     # Start tcp replay
     print("Starting tcp replay...")
@@ -334,29 +335,24 @@ def change_packet_size_zeek(packet_size):
     # proc.terminate()
     
 
-"""
-Arguments for main():
-First - first mbits/s speed index
-Last - last mbits/s speed index
-Step - mbits/s speed index increase per iteration
-Loop - number of times to loop the pcap file
-"""
 
-# main([512],100,200,100,1)
+def check_actual_drop_rate(ids_name): #TODO: The total recorded packets should match the tcp replay packet otherwise a new drop rate should be recorded
+    pass
+
 def main():
     print("Current Working Directory:", os.getcwd())
     parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
     # parser.add_argument("packet_size", help="Choose packet sizes")
     parser.add_argument("interface",help="Which interface should the IDSs be run on?")
     args = parser.parse_args()
-    loop = 1
+    loop = 10
     first = 50
     last = 51
     step = 100
-        
+    # TODO: Processes names are wrong, snort and zeek are barely logging resource consumption values.
     
     # change_packet_size(args.packet_size)
-    for ids_name in ["suricata","zeek","snort"]:
+    for ids_name in ["snort","zeek","suricata"]:
         for i in range(first,last,step):
             print("Running with speed:", i)
             run(ids_name, loop, i, args.interface)
