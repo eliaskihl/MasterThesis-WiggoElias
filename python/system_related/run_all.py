@@ -69,7 +69,13 @@ def log_performance(log_file, process_name,tcp_proc):
         # Writes to csv
         writer = csv.writer(f)
         writer.writerow(["Time", "CPU_Usage (%)", "Memory_Usage (%)"])  # CSV header
-        psutil.cpu_percent(interval=10)
+        # psutil.cpu_percent(interval=10)
+        # Initate a baseline for cpu precentage
+        for proc in psutil.process_iter():
+            try:
+                proc.cpu_percent(interval=None)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass  # Skip processes that may terminate or be inaccessible
         while tcp_proc.poll() is None:
             # Find the process by name
             total_cpu = 0
@@ -340,6 +346,11 @@ def check_actual_drop_rate(ids_name): #TODO: The total recorded packets should m
     pass
 
 def main():
+    """
+    Creating an interface:  sudo ip link add veth_host type veth peer name veth_docker
+                            sudo ip link set veth_host up
+                            sudo ip link set veth_docker up
+    """
     print("Current Working Directory:", os.getcwd())
     parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
     # parser.add_argument("packet_size", help="Choose packet sizes")
