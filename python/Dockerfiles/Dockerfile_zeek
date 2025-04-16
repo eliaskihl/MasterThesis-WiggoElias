@@ -5,7 +5,7 @@ FROM zeek/zeek:lts
 # # WORKDIR /
 
 # # Install dependencies (optional)
-# RUN apt update && apt install -y tcpdump iproute2
+RUN apt update && apt install -y tcpdump iproute2 tcpreplay procps 
 
 # COPY ./start_zeek.sh start_zeek.sh
 

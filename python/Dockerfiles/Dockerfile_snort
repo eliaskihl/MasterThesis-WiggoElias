@@ -22,10 +22,12 @@ RUN apt-get update &&                           \
         pkg-config                              \
         tar                                     \
         wget                                    \
-        zlib1g-dev &&                           \
-    apt-get clean &&                            \
+        zlib1g-dev                              \
+        tcpreplay                               \
+    && apt-get clean &&                         \
     rm -rf /var/cache/apt/archives/*deb         \
-        /var/lib/apt/lists/* /tmp/* /var/tmp/*
+           /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 
 RUN mkdir /snort 
 
@@ -56,4 +58,4 @@ RUN wget -nv https://github.com/snort3/snort3/archive/refs/tags/${SNORT_VERSION}
 RUN ldconfig
 
 #ENTRYPOINT ["/snort/bin/snort"]
-CMD ["bin/bash"]
+CMD ["/bin/bash"]
