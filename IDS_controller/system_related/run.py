@@ -194,13 +194,17 @@ def log_performance(log_file,tcp_proc,interface):
         # Writes to csv
         writer = csv.writer(f)
         writer.writerow(["Time","Role", "CPU_Usage", "Memory_Usage", "Upload_Speed", "Download_Speed"])  # CSV header
-        psutil.cpu_percent(interval=1) # Take the average over 1 second
+        
+        # Initate a baseline for cpu precentage
+        for proc in psutil.process_iter():
+            try:
+                proc.cpu_percent(interval=None)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass  # Skip processes that may terminate or be inaccessible
+        
         while tcp_proc.poll() is None:
             
-            
-
             # Find the process by name
-            
             for proc in psutil.process_iter(attrs=["pid", "name", "cpu_percent", "memory_info"]):
                 
                 if "zeek" in proc.info["name"].lower():
@@ -234,7 +238,7 @@ def log_performance(log_file,tcp_proc,interface):
 
                     #print(proc.info["name"], ":", proc.info["cpu_percent"],":", memory_percentage, ":", proc.info["pid"])
 
-            time.sleep(5) 
+            time.sleep(1) 
             #psutil.process_iter.cache_clear()
     print("Logging complete")
 

@@ -20,7 +20,7 @@ def wait_for_all():
         # Open and read each log file
         with open(f"./suricata/tmp/temp.log", 'r') as suricata_file, \
              open(f"./zeek/tmp/err.log", 'r') as zeek_file, \
-             open(f"./snort3/tmp/temp.log", 'r') as snort_file:
+             open(f"./snort/tmp/temp.log", 'r') as snort_file:
             
             suricata_status = "Engine started" in suricata_file.read()
             zeek_status = "listening on" in zeek_file.read()
@@ -34,12 +34,8 @@ def wait_for_all():
 
 
 def run(loop, speed, pac_size, interfaces):
-    dotenv_path = find_dotenv()
-    load_dotenv(dotenv_path)
-    snort_path = os.getenv("SNORT_PATH")
-    zeek_path = os.getenv("ZEEK_PATH")
-    suricata_path = os.getenv("SURICATA_PATH")
-    ids_name = ["suricata","snort3","zeek"]
+
+    ids_name = ["suricata","snort","zeek"]
     filepaths = {}
     for name in ids_name:
         if not os.path.exists(f"./{str(name)}/perf_files_{str(pac_size)}"):
@@ -58,11 +54,41 @@ def run(loop, speed, pac_size, interfaces):
     ids_proc={}
     for name, interface in zip(ids_name, interfaces):
         if name == "suricata":
-            ids_proc[name] = subprocess.Popen(["sudo", suricata_path, "-i", interface, "-l", "./suricata/logs"], stdout=temp["suricata"], stderr=err["suricata"]) 
-        elif name =="snort3":
-            ids_proc[name] = subprocess.Popen(["sudo", snort_path, "-c", "../config/snort3/snort.lua", "-i", interface], stdout=temp["snort3"], stderr=err["snort3"])
+            cmd = [
+                "sudo", 
+                "docker", 
+                "exec", 
+                "suricata-container", 
+                "bash", 
+                "-c",  
+                f"cd .. && cd .. && cd usr/local/bin && ./suricata -i {interface} -c ../etc/suricata/suricata.yaml"  
+            ]
+            # cmd = ["sudo", suricata_path, "-i", interface, "-l", "./suricata/logs"]
+            ids_proc[name] = subprocess.Popen(cmd, stdout=temp["suricata"], stderr=err["suricata"]) 
+        elif name =="snort":
+            cmd = [
+                "sudo", 
+                "docker", 
+                "exec", 
+                "snort-container", 
+                "bash", 
+                "-c",  
+                f"cd bin && ./snort  -i {interface} -c ../etc/snort/snort.lua"  
+            ]
+            # cmd = ["sudo", snort_path, "-c", "../config/snort/snort.lua", "-i", interface]
+            ids_proc[name] = subprocess.Popen(cmd, stdout=temp["snort"], stderr=err["snort"])
         elif name == "zeek":
-            ids_proc[name] = subprocess.Popen(["sudo", zeek_path, "-i", interface], stdout=temp["zeek"], stderr=err["zeek"])
+            cmd = [
+                "sudo", 
+                "docker", 
+                "exec", 
+                "zeek-container", 
+                "bash", 
+                "-c",
+                f"cd logs && zeek -C -i {interface} /usr/local/zeek/share/zeek/test-all-policy.zeek" 
+            ]
+            # cmd = ["sudo", zeek_path, "-i", interface], stdout=temp["zeek"]
+            ids_proc[name] = subprocess.Popen(cmd, stderr=err["zeek"])
     # Wait for start
     print("wait for all")
     wait_for_all()
@@ -71,16 +97,24 @@ def run(loop, speed, pac_size, interfaces):
     time.sleep(1)
     
     tcpreplay_proc = {}
-    for interface in interfaces:
+    for name, interface in zip(ids_name, interfaces):
         if not os.path.exists(f"./dir_{interface}/tmp/"):
             print("Directory not found, creating directory...")
             os.makedirs(f"./dir_{interface}/tmp/")
         with open(f"./dir_{interface}/tmp/temp_tcpreplay.log", "w") as temp, \
         open(f"./dir_{interface}/tmp/err_tcpreplay.log", "w") as err:
             try:
-                tcpreplay_proc[interface] = subprocess.Popen(["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/smallFlows.pcap"],
-                    stdout=temp, stderr=err
-                )
+                cmd = [
+                    "docker", "exec", 
+                    f"{name}-container",
+                    "tcpreplay",
+                    "-i", interface,
+                    f"--loop={loop}",
+                    f"--mbps={speed}",
+                    "/pcap/smallFlows.pcap"
+                ]
+                # cmd = ["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/smallFlows.pcap"]
+                tcpreplay_proc[interface] = subprocess.Popen(cmd,stdout=temp, stderr=err)
                 time.sleep(1) # Give process time to start
             except Exception as e:
                 print(f"Error starting tcpreplay on {interface}: {e}")
@@ -105,13 +139,17 @@ def run(loop, speed, pac_size, interfaces):
     
     # Wait / Terminate ids_proc
     for name in ids_name:      
-        print(f"Termating IDS: {name}..")
-        ids_proc[name].terminate()
-        
+        if name == "suricata":
+            subprocess.run([
+                "docker", "exec", f"{name}-container",
+                "bash", "-c", "kill -SIGINT $(pgrep -f suricata)"
+            ])
+        else:
+            subprocess.run([
+                "docker", "exec", f"{name}-container",
+                "bash", "-c", f"kill -SIGINT $(pgrep -f {name})"
+            ])
       
-    for name in ids_name:
-        print(f"Wait for {name} to finish")
-        ids_proc[name].wait()
     
     # End / join thread
     print("Terminating monitor thread")
@@ -124,7 +162,7 @@ def run(loop, speed, pac_size, interfaces):
     for name in ids_name:
         if name == "suricata":
             drop_rate[name], total_packets[name] = extract_drop_rate_suricata()
-        elif name == "snort3":
+        elif name == "snort":
             drop_rate[name], total_packets[name] = extract_drop_rate_snort()
         elif name == "zeek":
             drop_rate[name], total_packets[name] = extract_drop_rate_zeek()
@@ -136,14 +174,17 @@ def run(loop, speed, pac_size, interfaces):
 
 def wait_for_all_drop_rates():
     # Create a function that will wait until err or temp files contain "total packets"
-    while open(f"./suricata/tmp/temp.log", 'r').read().find("packets:") < 0 and open(f"./zeek/tmp/err.log", 'r').read().find(f"packets received on interface") < 0 and open(f"./snort3/tmp/temp.log", 'r').read().find(f"received:") < 0:
+    while open(f"./suricata/tmp/temp.log", 'r').read().find("packets:") < 0 and open(f"./zeek/tmp/err.log", 'r').read().find(f"packets received on interface") < 0 and open(f"./snort/tmp/temp.log", 'r').read().find(f"received:") < 0:
         time.sleep(2)
 
 def create_interface(interfaces):
     for interface in interfaces:
+        # Dummy is not enough need to be tunneled interface
         try:
-            subprocess.run(["sudo", "ip", "link", "add", interface, "type", "dummy"], check=True)  
-            subprocess.run(["sudo", "ip", "link", "set", interface, "up"], check=True)
+            subprocess.run(["sudo", "ip", "link", "add", interface +"_host", "type", "veth", "peer", "name", interface+"_docker"], check=True)  
+            # Bring them up
+            subprocess.run(["sudo", "ip", "link", "set", interface+"_host", "up"], check=True)
+            subprocess.run(["sudo", "ip", "link", "set", interface+"_docker", "up"], check=True)
         except subprocess.CalledProcessError as e:
             print(f"Failed to create interfaces {e}")
 def remove_interface(interfaces):

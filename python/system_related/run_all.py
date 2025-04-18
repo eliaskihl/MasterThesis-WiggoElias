@@ -8,6 +8,8 @@ from threading import Thread
 from vis_all import visualize
 import argparse
 
+def is_interface_valid(interface_name):
+    return interface_name in psutil.net_if_addrs()
 
 def wait_for_suricata_drop_rates():
     # Create a function that will wait until err or temp files contain "total packets"
@@ -154,7 +156,7 @@ def run(ids_name, loop, speed, interface):
         wait_for_zeek()
     
     if ids_name == "snort":
-        time.sleep(30)      # TODO: change from sleep to something else - Give the process 10 seconds to intitate.
+        time.sleep(10)      # TODO: change from sleep to something else - Give the process 10 seconds to intitate.
                             # TODO: Maybe this should be scaled with the throughput for all IDSs.
 
     # Start tcp replay
@@ -193,7 +195,11 @@ def run(ids_name, loop, speed, interface):
             "bash", "-c", "kill -SIGINT $(pgrep -f suricata)"
         ])
     else:
-        subprocess.run(["docker", "exec", f"{ids_name}-container", "pkill", "-SIGINT", f"{ids_name}"])
+        # subprocess.run(["docker", "exec", f"{ids_name}-container", "pkill", "-SIGINT", f"{ids_name}"])
+        subprocess.run([
+            "docker", "exec", f"{ids_name}-container",
+            "bash", "-c", f"kill -SIGINT $(pgrep -f {ids_name})"
+        ])
     time.sleep(1)
     print(f"Wait for {ids_name} to finish")
     
@@ -227,10 +233,17 @@ def extract_drop_rate_zeek():
                 total_packets = int(match.group(1))
                 dropped_packets = int(match.group(3))
                 drop_rate = float(match.group(4))
-                
                 print(f"Total Packets: {total_packets}")
                 print(f"Dropped Packets: {dropped_packets}")
                 print(f"Drop Rate: {drop_rate}%")
+                
+                # Check
+                print("CHECK")
+                drop_rate,total_packets = check_drop_rate(drop_rate,total_packets,"zeek")
+                print(f"Total Packets: {total_packets}")
+                print(f"Dropped Packets: {dropped_packets}")
+                print(f"Drop Rate: {drop_rate}%")
+                
                 return drop_rate, total_packets
     
 
@@ -252,13 +265,25 @@ def extract_drop_rate_snort():
 
     if total_packets is not None and dropped_packets is not None:
         drop_rate = (dropped_packets / total_packets) * 100 if total_packets > 0 else 0.0
+        
         print(f"Total Packets: {total_packets}")
         print(f"Dropped Packets: {dropped_packets}")
         print(f"Drop Rate: {drop_rate:.2f}%")
+        print("CHECK")
+        drop_rate,total_packets = check_drop_rate(drop_rate,total_packets,"snort")
+        print(f"Total Packets: {total_packets}")
+        print(f"Drop Rate: {drop_rate:.2f}%")
         return drop_rate, total_packets
-    else:
-        print("Could not find both received and dropped packet stats.")
-        return None, None
+    else: 
+        # No dropped packets, means 0 drop rate
+        drop_rate = 0.0
+        print(f"Total Packets: {total_packets}")
+        print(f"Drop Rate: {drop_rate:.2f}%")
+        print("CHECK")
+        drop_rate,total_packets = check_drop_rate(drop_rate,total_packets,"snort")
+        print(f"Total Packets: {total_packets}")
+        print(f"Drop Rate: {drop_rate:.2f}%")
+        return drop_rate, total_packets
 
 
 def extract_drop_rate_suricata():
@@ -274,8 +299,89 @@ def extract_drop_rate_suricata():
                 print(f"Total Packets: {total_packets}")
                 print(f"Dropped Packets: {dropped_packets}")
                 print(f"Drop Rate: {drop_rate}%")
+                print("CHECK")
+                drop_rate,total_packets = check_drop_rate(drop_rate,total_packets,"suricata")
+                print(f"Total Packets: {total_packets}")
+                print(f"Drop Rate: {drop_rate:.2f}%")
                 return drop_rate, total_packets
+            
     
+
+def check_drop_rate(ids_drop_rate,ids_total_packets,ids_name): #TODO: Does not work for snort
+    tcpreplay_total_packets = 0
+    log = f"./{ids_name}/tmp/temp_tcpreplay.log"
+    with open(log, "r") as file:
+        for line in file:
+            match = re.search(r"Successful packets:\s*(\d+)", line)
+            if match:
+                tcpreplay_total_packets = int(match.group(1))  
+
+    if tcpreplay_total_packets != ids_total_packets and ids_total_packets < tcpreplay_total_packets:
+
+        delta = tcpreplay_total_packets - ids_total_packets
+        ids_dropped_packets = ids_total_packets * ids_drop_rate
+        new_drop_rate = ((ids_dropped_packets + delta)/tcpreplay_total_packets)*100
+        return new_drop_rate,tcpreplay_total_packets
+    
+    else:
+        return ids_drop_rate,ids_total_packets
+
+def restart_interface(interface):
+    host_if = f"{interface}_host"
+    docker_if = f"{interface}_docker"
+    # Remove old interface
+    if is_interface_valid(host_if):
+        print("hello")
+        subprocess.run(["sudo", "ip", "link", "delete", host_if], check=False)
+
+    # Create the veth pair
+    subprocess.run(["sudo", "ip", "link", "add", host_if, "type", "veth", "peer", "name", docker_if], check=True)
+
+    # Set veth_host up
+    subprocess.run(["sudo", "ip", "link", "set", host_if, "up"], check=True)
+
+    # Set veth_docker up
+    subprocess.run(["sudo", "ip", "link", "set", docker_if, "up"], check=True)
+
+
+def main():
+    start = time.time()
+    """
+    Creating an interface:  sudo ip link add veth_host type veth peer name veth_docker
+                            sudo ip link set veth_host up
+                            sudo ip link set veth_docker up
+    """
+    print("Current Working Directory:", os.getcwd())
+    parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
+    # parser.add_argument("packet_size", help="Choose packet sizes")
+    parser.add_argument("interface",help="Which interface should the IDSs be run on?")
+    args = parser.parse_args()
+    loop = 10
+    first = 60
+    last = 61
+    step = 100
+    restart_interface(args.interface) # This will create an interface link between interface_name_host and interface_name_docker
+    interface = (args.interface+"_host")
+    if not is_interface_valid(interface): # Check if interface is valid and exists
+        raise Exception(f"Error: interface: {interface} does not exist.")
+    # change_packet_size(args.packet_size)
+    
+    for ids_name in ["snort","zeek","suricata"]:
+        for i in range(first,last,step):
+            print("Running with speed:", i)
+            run(ids_name, loop, i, interface)
+    
+    # visualize()
+    runtime = time.time()-start
+    print("Runtime:",runtime)
+    
+    
+if __name__ == "__main__":
+    main()
+
+
+""" --Packet Size Stuff-- """
+
 def change_packet_size(packet_size):
     """ 
     Change the packet size to a new int, for all IDSs
@@ -340,39 +446,3 @@ def change_packet_size_zeek(packet_size):
     # time.sleep(20)
     # proc.terminate()
     
-
-
-def check_actual_drop_rate(ids_name): #TODO: The total recorded packets should match the tcp replay packet otherwise a new drop rate should be recorded
-    pass
-
-def main():
-    """
-    Creating an interface:  sudo ip link add veth_host type veth peer name veth_docker
-                            sudo ip link set veth_host up
-                            sudo ip link set veth_docker up
-    """
-    print("Current Working Directory:", os.getcwd())
-    parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
-    # parser.add_argument("packet_size", help="Choose packet sizes")
-    parser.add_argument("interface",help="Which interface should the IDSs be run on?")
-    args = parser.parse_args()
-    loop = 10
-    first = 50
-    last = 51
-    step = 100
-    # TODO: Processes names are wrong, snort and zeek are barely logging resource consumption values.
-    
-    # change_packet_size(args.packet_size)
-    for ids_name in ["snort","zeek","suricata"]:
-        for i in range(first,last,step):
-            print("Running with speed:", i)
-            run(ids_name, loop, i, args.interface)
-    
-    # visualize()
-    
-    
-    
-if __name__ == "__main__":
-    main()
-
-
