@@ -4,12 +4,12 @@ import os
 
 # Mapping of tool names to their respective directories and scripts
 TOOLS = {
-    "suricata": {
+        "suricata": {
         "dir": "python/security_related/suricata",
         "script": "run_suricata.py",
     },
-        "snort3": {
-        "dir": "python/security_related/snort3",
+        "snort": {
+        "dir": "python/security_related/snort",
         "script": "run_snort3.py",
     },
         "zeek": {
