@@ -10,7 +10,7 @@ TOOLS = {
     },
         "snort": {
         "dir": "python/security_related/snort",
-        "script": "run_snort3.py",
+        "script": "run_snort.py",
     },
         "zeek": {
         "dir": "python/security_related/zeek",
