@@ -1,0 +1,43 @@
+<?xml version="1.0" ?>
+<labels version_parser="0.3">
+	<input>
+		<filename>smallFlows.pcap</filename>
+		<sha256>77d06d3f33f1a95fb9f2610f20ead8ce978449077d6ba22d4945b85bd48f75d1</sha256>
+	</input>
+	<output>
+		<filename>smallFlows_output.pcap</filename>
+		<sha256>753ecedaedaa49f595be55f030acfded0e57dc2e878589cee4c9bb6a375d2d59</sha256>
+	</output>
+	<attack>
+		<name>DDoSAttack</name>
+		<note></note>
+		<seed>269591133002009207863359361403363645841</seed>
+		<injected_packets>174</injected_packets>
+		<timestamp_start>
+			<timestamp>0.0</timestamp>
+			<timestamp_hr>1970-01-01 00:00:00.000000</timestamp_hr>
+		</timestamp_start>
+		<timestamp_end>
+			<timestamp>17.985812492181637</timestamp>
+			<timestamp_hr>1970-01-01 00:00:17.985812</timestamp_hr>
+		</timestamp_end>
+		<parameters>
+			<inject.at-timestamp user_specified="True">0.0</inject.at-timestamp>
+			<inject.after-pkt user_specified="False">839</inject.after-pkt>
+			<bandwidth.max user_specified="False">0.0</bandwidth.max>
+			<bandwidth.min.local user_specified="False">0.0</bandwidth.min.local>
+			<bandwidth.min.public user_specified="False">0.0</bandwidth.min.public>
+			<ip.src user_specified="False">['24.171.102.112', '33.208.59.249', '15.224.201.54', '57.8.253.95', '55.57.45.255', '31.205.117.12', '34.250.45.31', '107.114.76.6', '113.222.47.206', '40.62.174.157', '36.117.138.38', '21.64.168.183', '53.37.60.144']</ip.src>
+			<mac.src user_specified="False">['ac:f3:78:0b:9a:e0', '2c:8d:1f:dc:3b:3e', 'ac:36:49:da:83:5b', '18:2b:62:a8:a2:3c', 'c4:a7:74:f0:5b:9e', 'd4:a5:aa:22:b1:b7', 'b4:be:26:d5:59:24', 'a4:4c:17:53:6d:61', '44:45:70:2a:00:39', '64:fc:e1:06:43:47', '38:0a:42:a7:ed:1b', 'f4:17:08:85:1d:c4', 'b0:c8:ac:ad:dd:71']</mac.src>
+			<port.src user_specified="False">64133</port.src>
+			<ip.dst user_specified="False">92.224.118.42</ip.dst>
+			<mac.dst user_specified="False">00:1a:8c:10:ad:30</mac.dst>
+			<port.dst user_specified="False">None</port.dst>
+			<packets.per-second user_specified="False">0.0</packets.per-second>
+			<attackers.count user_specified="False">13</attackers.count>
+			<attack.duration user_specified="False">20</attack.duration>
+			<victim.buffer user_specified="False">8270</victim.buffer>
+			<latency.max user_specified="False">0.0</latency.max>
+		</parameters>
+	</attack>
+</labels>

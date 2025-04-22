@@ -11,6 +11,8 @@ services:
       - ./python/ids_configuration/zeek/config/zeek:/usr/local/zeek/etc
       - ./python/ids_configuration/zeek/rules/policy:/usr/local/zeek/share/zeek/policy
       - ./python/ids_configuration/zeek/rules/test-all-policy.zeek:/usr/local/zeek/share/zeek/test-all-policy.zeek
+      - ./python/security_related/traffic_generators:/traffic_generators
+
     network_mode: "host"
     privileged: true  # Allow privileged mode
     stdin_open: true
@@ -27,6 +29,8 @@ services:
       - ./python/system_related/pcap:/pcap
       - ./python/ids_configuration/snort/config:/snort/etc/snort
       - ./python/ids_configuration/snort/rules:/snort/etc/snort/rules
+      - ./python/security_related/traffic_generators:/traffic_generators
+
     network_mode: "host"
     privileged: true  # Allow privileged mode
     stdin_open: true
@@ -43,6 +47,20 @@ services:
       - ./python/system_related/pcap:/pcap
       - ./python/ids_configuration/suricata/config:/usr/local/etc/suricata
       - ./python/ids_configuration/suricata/rules:/usr/local/var/lib/suricata/rules
+      - ./python/security_related/traffic_generators:/traffic_generators
+
+    network_mode: "host"
+    privileged: true  # Allow privileged mode
+    stdin_open: true
+    tty: true
+  id2t:
+    build:
+      context: ./python/Dockerfiles
+      dockerfile: Dockerfile_id2t
+    container_name: id2t-container
+    volumes:
+      - ./python/security_related/traffic_generators:/traffic_generators
+
     network_mode: "host"
     privileged: true  # Allow privileged mode
     stdin_open: true
