@@ -20,14 +20,23 @@ TOOLS = {
         "dir": "python/system_related",
         "script": "run_all.py",
     },
-    "syspar": {
+        "syspar": {
         "dir": "python/system_related",
         "script": "run_par.py",
     },
-    "controller": {
+        "syslatency": {
+        "dir": "python/system_related",
+        "script": "run_latency.py",
+    },
+        "sysvis": {
+        "dir": "python/system_related",
+        "script": "vis_all.py",
+    },
+        "controller": {
         "dir": "IDS_controller/system_related",
         "script": "run.py",
     },
+    
 
 }
 

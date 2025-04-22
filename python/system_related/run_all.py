@@ -4,6 +4,8 @@ import psutil
 import csv
 import re
 import os
+import glob
+from scapy.all import IP, TCP, Ether, RandShort, wrpcap
 from threading import Thread
 from vis_all import visualize
 import argparse
@@ -99,17 +101,32 @@ def log_performance(log_file, process_name,tcp_proc):
 
             time.sleep(1)
             #psutil.process_iter.cache_clear()
-    print("Logging complete")
+    print("Logging complete", flush=True)
 
-def run(ids_name, loop, speed, interface):
+def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
     
+    if pcap == "smallFlows.pcap":
+        folder = "regular"
+    else:
+        folder = "latency"
+        latency = pcap.split(".")[0].split("_")[-1].split("us")[0]
+        print("LATENCY:",latency)
+
+    # Fix filepath
+    pcap="/pcap/"+pcap
     
-    if not os.path.exists(f"./{str(ids_name)}/perf_files"):
-        print("Directory not found, creating directory...")
-        os.makedirs(f"./{str(ids_name)}/perf_files")
-    filepath = f"./{ids_name}/perf_files/ids_performance_log_{speed}.csv"
+    if folder == "regular":
+        if not os.path.exists(f"./{folder}/{str(ids_name)}/perf_files"):
+            print("Directory not found, creating directory...")
+            os.makedirs(f"./{folder}/{str(ids_name)}/perf_files")
+        filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
+    elif folder == "latency":
+        if not os.path.exists(f"./{folder}/{str(ids_name)}/perf_files"):
+            print("Directory not found, creating directory...")
+            os.makedirs(f"./{folder}/{str(ids_name)}/perf_files")
+        filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{latency}.csv"
     # Start IDS as a subprocess
-    print(f"Starting {ids_name}...")
+    print(f"Starting {ids_name}...", flush=True)
     
     temp = open(f"./{ids_name}/tmp/temp.log", "w")
     err = open(f"./{ids_name}/tmp/err.log", "w")
@@ -160,7 +177,7 @@ def run(ids_name, loop, speed, interface):
                             # TODO: Maybe this should be scaled with the throughput for all IDSs.
 
     # Start tcp replay
-    print("Starting tcp replay...")
+    print("Starting tcp replay...", flush=True)
     time.sleep(1)
     temp = open(f"./{ids_name}/tmp/temp_tcpreplay.log", "w")
     err = open(f"./{ids_name}/tmp/err_tcpreplay.log", "w")
@@ -171,7 +188,7 @@ def run(ids_name, loop, speed, interface):
         "-i", interface,
         f"--loop={loop}",
         f"--mbps={speed}",
-        "/pcap/smallFlows.pcap"
+        pcap
     ]
     # cmd = ["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/smallFlows.pcap"]
     tcpreplay_proc = subprocess.Popen(cmd,stdout=temp, stderr=err)
@@ -180,19 +197,19 @@ def run(ids_name, loop, speed, interface):
     monitor_thread.start()
     time.sleep(1)
     # Wait / Terminate tcp replay
-    print("Wait for TCP replay to finish")
+    print("Wait for TCP replay to finish", flush=True)
     tcpreplay_proc.wait()
     time.sleep(1)
-    print(f"Terminating tcpreplay..")
+    print(f"Terminating tcpreplay..", flush=True)
     tcpreplay_proc.terminate()
     time.sleep(2)
     # Wait / Terminate ids_proc
-    print(f"Termating {ids_name}..")
+    print(f"Termating {ids_name}..", flush=True)
 
-    if ids_name == "suricata":
+    if ids_name == "snort":
         subprocess.run([
             "docker", "exec", f"{ids_name}-container",
-            "bash", "-c", "kill -SIGINT $(pgrep -f suricata)"
+            "bash", "-c", f"kill -SIGINT $(pgrep -fx './snort -i veth_host -c ../etc/snort/snort.lua')"
         ])
     else:
         # subprocess.run(["docker", "exec", f"{ids_name}-container", "pkill", "-SIGINT", f"{ids_name}"])
@@ -201,11 +218,11 @@ def run(ids_name, loop, speed, interface):
             "bash", "-c", f"kill -SIGINT $(pgrep -f {ids_name})"
         ])
     time.sleep(1)
-    print(f"Wait for {ids_name} to finish")
+    print(f"Wait for {ids_name} to finish", flush=True)
     
     
     # End / join thread
-    print("Terminating monitor thread")
+    print("Terminating monitor thread", flush=True)
     monitor_thread.join()
 
     # Extract drop rate from ids
@@ -219,10 +236,16 @@ def run(ids_name, loop, speed, interface):
         wait_for_zeek_drop_rates()
         drop_rate, total_packets = extract_drop_rate_zeek()
     # Write drop rate to file
-    with open(f"./{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
-        f.write(str(drop_rate))
-    with open(f"./{ids_name}/perf_files/total_packets_{speed}.txt", "w") as f:
-        f.write(str(total_packets))
+    if folder == "regular":
+        with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
+            f.write(str(drop_rate))
+        with open(f"./{folder}/{ids_name}/perf_files/total_packets_{speed}.txt", "w") as f:
+            f.write(str(total_packets))
+    elif folder == "latency":
+        with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{latency}.txt", "w") as f:
+            f.write(str(drop_rate))
+        with open(f"./{folder}/{ids_name}/perf_files/total_packets_{latency}.txt", "w") as f:
+            f.write(str(total_packets))
     
 def extract_drop_rate_zeek():
     log = "./zeek/tmp/err.log"
@@ -304,7 +327,7 @@ def extract_drop_rate_suricata():
                 print(f"Total Packets: {total_packets}")
                 print(f"Drop Rate: {drop_rate:.2f}%")
                 return drop_rate, total_packets
-            
+        return 0.0, 0
     
 
 def check_drop_rate(ids_drop_rate,ids_total_packets,ids_name): #TODO: Does not work for snort
@@ -319,7 +342,7 @@ def check_drop_rate(ids_drop_rate,ids_total_packets,ids_name): #TODO: Does not w
     if tcpreplay_total_packets != ids_total_packets and ids_total_packets < tcpreplay_total_packets:
 
         delta = tcpreplay_total_packets - ids_total_packets
-        ids_dropped_packets = ids_total_packets * ids_drop_rate
+        ids_dropped_packets = ids_total_packets * (ids_drop_rate/100) # Must be divided from % to decimal
         new_drop_rate = ((ids_dropped_packets + delta)/tcpreplay_total_packets)*100
         return new_drop_rate,tcpreplay_total_packets
     
@@ -331,7 +354,7 @@ def restart_interface(interface):
     docker_if = f"{interface}_docker"
     # Remove old interface
     if is_interface_valid(host_if):
-        print("hello")
+        print("This interface already exists")
         subprocess.run(["sudo", "ip", "link", "delete", host_if], check=False)
 
     # Create the veth pair
@@ -343,6 +366,68 @@ def restart_interface(interface):
     # Set veth_docker up
     subprocess.run(["sudo", "ip", "link", "set", docker_if, "up"], check=True)
 
+def latency_eval(ids_name,loop,speed, interface):
+    file_paths = glob.glob("./pcap/latency*")
+    print(file_paths)
+    for path in file_paths: # TODO: Need to mount new (latency) pcap files /upload them to the container
+        filename = os.path.basename(path)
+        print(filename)  # Output: latency_128us.pcap
+        run(ids_name, loop, speed, interface, pcap=filename)
+
+
+def generate_pcap_file_latency_eval(pcap_file_size):
+    # Latency = TCP Window Size / Throughput
+    dst_ip = "192.182.17.2"
+    dst_port = 80
+    dst_mac = "00:11:22:33:44:55"  # Random mac address
+
+    # Latency test configurations in microseconds
+    latency_us_values = [8, 16, 32, 64, 128, 256]  # microseconds
+
+    # Select a fixed throughput for test (in Mbps)
+    throughput_mbps = 512 # IMPORTANT: Should run the tests with tcpreplay speed = 512
+
+    print(f"Using throughput: {throughput_mbps} Mbps")
+
+    # Create pcap directory if it doesn't exist
+    os.makedirs("./pcap", exist_ok=True)
+
+    for latency_us in latency_us_values:
+        # Calculate required TCP window size in bytes
+        window_size_bytes = int((latency_us * throughput_mbps) / 8)
+        print(f"\nTarget latency: {latency_us} μs -> Window Size: {window_size_bytes} bytes")
+
+        packets = []  # List to store all packets
+       
+
+        # Create 1000 packets
+        for _ in range(pcap_file_size):
+            ip = IP(dst=dst_ip)
+            tcp = TCP(
+                dport=dst_port,
+                sport=RandShort(),   # Random source port for variety
+                flags='S',           # SYN flag
+                window=window_size_bytes
+            )
+            packet = ip / tcp  # Create the IP/TCP packet
+            packets.append(packet)  # Add to packets list
+        
+
+        # Wrap all packets in Ethernet frames
+        ether_packets = [Ether(dst=dst_mac) / p for p in packets]
+        
+        # Check number of packets after wrapping
+        print(f"Total Ethernet-wrapped packets: {len(ether_packets)}")
+
+        # Define filename for pcap file
+        filename = f"latency_{latency_us}us.pcap"
+        filename = os.path.join("./pcap/", filename)         
+        
+        # Save the packets to the pcap file
+        wrpcap(filename, ether_packets)
+        print(f"✔ Saved {filename} with {len(ether_packets)} packets.")
+
+    print("\nAll files have been saved.")
 
 def main():
     start = time.time()
@@ -352,23 +437,28 @@ def main():
                             sudo ip link set veth_docker up
     """
     print("Current Working Directory:", os.getcwd())
+    # generate_pcap_file_latency_eval(140000) # Similar amount to regular measurments, could be calculated by checking loop size and smallFlows.pcap length.
     parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
     # parser.add_argument("packet_size", help="Choose packet sizes")
     parser.add_argument("interface",help="Which interface should the IDSs be run on?")
     args = parser.parse_args()
     loop = 10
-    first = 60
-    last = 61
-    step = 100
+    first = 10
+    last = 71
+    step = 10
+    # generate_pcap_file_latency_eval()
+    
     restart_interface(args.interface) # This will create an interface link between interface_name_host and interface_name_docker
     interface = (args.interface+"_host")
     if not is_interface_valid(interface): # Check if interface is valid and exists
         raise Exception(f"Error: interface: {interface} does not exist.")
     # change_packet_size(args.packet_size)
     
-    for ids_name in ["snort","zeek","suricata"]:
+    for ids_name in ["suricata"]:
+        # latency_eval(ids_name,10,512,interface)
         for i in range(first,last,step):
             print("Running with speed:", i)
+            restart_interface(args.interface) # Restart the interface between runs so snort can shutdown
             run(ids_name, loop, i, interface)
     
     # visualize()
@@ -378,6 +468,8 @@ def main():
     
 if __name__ == "__main__":
     main()
+
+
 
 
 """ --Packet Size Stuff-- """

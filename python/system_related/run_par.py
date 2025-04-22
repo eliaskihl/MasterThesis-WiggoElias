@@ -2,18 +2,9 @@ import time
 import subprocess
 from threading import Thread
 import os
-
-from vis_all import visualize
+import re 
 import argparse
-from dotenv import load_dotenv,find_dotenv
-from run_all import change_packet_size,run,log_performance,extract_drop_rate_suricata,extract_drop_rate_snort,extract_drop_rate_zeek
-""""
-Arguments for main():
-First - first mbits/s speed index
-Last - last mbits/s speed index
-Step - mbits/s speed index increase per iteration
-Loop - number of times to loop the pcap file
-"""
+from run_all import log_performance,extract_drop_rate_suricata,extract_drop_rate_snort,extract_drop_rate_zeek, restart_interface
 
 def wait_for_all():
     while True:
@@ -33,15 +24,15 @@ def wait_for_all():
         time.sleep(2)  # Sleep before checking again
 
 
-def run(loop, speed, pac_size, interfaces):
+def run(loop, speed, interfaces):
 
     ids_name = ["suricata","snort","zeek"]
     filepaths = {}
     for name in ids_name:
-        if not os.path.exists(f"./{str(name)}/perf_files_{str(pac_size)}"):
+        if not os.path.exists(f"./parallel/{str(name)}/perf_files"):
             print("Directory not found, creating directory...")
-            os.mkdir(f"./{str(name)}/perf_files_{str(pac_size)}")
-        filepaths[name] = f"./{name}/perf_files_{pac_size}/ids_performance_log_{speed}.csv"
+            os.makedirs(f"./parallel/{str(name)}/perf_files")
+        filepaths[name] = f"./parallel/{name}/perf_files/ids_performance_log_{speed}.csv"
     # Start IDS as a subprocess
     print("Stating IDSs")
     temp = {}
@@ -90,10 +81,10 @@ def run(loop, speed, pac_size, interfaces):
             # cmd = ["sudo", zeek_path, "-i", interface], stdout=temp["zeek"]
             ids_proc[name] = subprocess.Popen(cmd, stderr=err["zeek"])
     # Wait for start
-    print("wait for all")
+    print("Wait for all")
     wait_for_all()
     # Start tcp replay
-    print("Starting tcp replay...")
+    print("Starting tcp replay...", flush=True)
     time.sleep(1)
     
     tcpreplay_proc = {}
@@ -128,12 +119,12 @@ def run(loop, speed, pac_size, interfaces):
     
     # Wait / Terminate tcp replay
     for interface in interfaces:    
-        print(f"Wait for TCP replay to finish on {interface}...")
+        print(f"Wait for TCP replay to finish on {interface}...", flush=True)
         tcpreplay_proc[interface].wait()
     time.sleep(1)
     for interface in interfaces:
         if tcpreplay_proc[interface].poll() is None:  # Check if still running
-            print(f"Terminating tcpreplay on {interface}...")
+            print(f"Terminating tcpreplay on {interface}...", flush=True)
             tcpreplay_proc[interface].terminate()
     time.sleep(2)
     
@@ -152,7 +143,7 @@ def run(loop, speed, pac_size, interfaces):
       
     
     # End / join thread
-    print("Terminating monitor thread")
+    print("Terminating monitor thread", flush=True)
     for name in ids_name:
         monitor_threads[name].join()
 
@@ -167,14 +158,38 @@ def run(loop, speed, pac_size, interfaces):
         elif name == "zeek":
             drop_rate[name], total_packets[name] = extract_drop_rate_zeek()
         # Write drop rate to file
-        with open(f"./{name}/perf_files_{pac_size}/drop_rate_{speed}.txt", "w") as f:
+        with open(f"./parallel/{name}/perf_files/drop_rate_{speed}.txt", "w") as f:
             f.write(str(drop_rate[name]))
-        with open(f"./{name}/perf_files_{pac_size}/total_packets_{speed}.txt", "w") as f:
+        with open(f"./parallel/{name}/perf_files/total_packets_{speed}.txt", "w") as f:
             f.write(str(total_packets[name]))
 
 def wait_for_all_drop_rates():
     # Create a function that will wait until err or temp files contain "total packets"
-    while open(f"./suricata/tmp/temp.log", 'r').read().find("packets:") < 0 and open(f"./zeek/tmp/err.log", 'r').read().find(f"packets received on interface") < 0 and open(f"./snort/tmp/temp.log", 'r').read().find(f"received:") < 0:
+    # while open(f"./suricata/tmp/temp.log", 'r').read().find("packets:") < 0 and open(f"./zeek/tmp/err.log", 'r').read().find(f"packets received on interface") < 0 and open(f"./snort/tmp/temp.log", 'r').read().find(f"received:") < 0:
+    #     time.sleep(2)
+    # time.sleep(10)
+    while True:
+        try:
+            with open("./suricata/tmp/temp.log", 'r') as s:
+                suricata_ready = re.search(r"packets: \d+", s.read()) is not None
+        except FileNotFoundError:
+            suricata_ready = False
+
+        try:
+            with open("./zeek/tmp/err.log", 'r') as z:
+                zeek_ready = "packets received on interface" in z.read()
+        except FileNotFoundError:
+            zeek_ready = False
+
+        try:
+            with open("./snort/tmp/temp.log", 'r') as sn:
+                snort_ready = re.search(r"received:\s*\d+", sn.read()) is not None
+        except FileNotFoundError:
+            snort_ready = False
+
+        if suricata_ready and zeek_ready and snort_ready:
+            break
+
         time.sleep(2)
 
 def create_interface(interfaces):
@@ -195,35 +210,43 @@ def remove_interface(interfaces):
             except subprocess.CalledProcessError as e:
                 print(f"Failed to create interfaces {e}")
 def main():
-    # Run in parallel
-    # TODO: Define 3 different ranges for the IDS to run in 
+    """
+    Arguments for main():
+    First - first mbits/s speed index
+    Last - last mbits/s speed index
+    Step - mbits/s speed index increase per iteration
+    Loop - number of times to loop the pcap file
+    """
+    start = time.time()
     parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
-    parser.add_argument("packet_size", help="Choose packet sizes")
     parser.add_argument("interface",help="Which interface should the IDSs be run on?")
     args = parser.parse_args()
     loop = 10
     first = 10
-    last = 151
-    step = 1000
+    last = 71
+    step = 10
 
-    # TODO: Add a sudo su command for root access
-    #subprocess.Popen(["sudo", "su"])
-    
-    # Change packet size
-    change_packet_size(args.packet_size)
-    interfaces = ["eth1","eth2"]
-    create_interface(interfaces)
+
+    interfaces = [args.interface+"1", args.interface+"2"]
     interfaces.insert(0, args.interface)
+    host_interfaces = []
+    # Start interfaces
+    for interface in interfaces:
+            restart_interface(interface)
+            host_interfaces.append(interface + "_host")
+    
     for i in range(first,last,step):
         print("Speed:",i)
-        run(loop, i, args.packet_size, interfaces)
+        print("Interfaces", host_interfaces)
+        run(loop, i, host_interfaces)
+        # Restart interfaces
+        for interface in interfaces:
+            restart_interface(interface)
         
-        
-    visualize(args.packet_size)
     # Remove interfaces
-    remove_interface(interfaces)
-    # Remove log files from zeek
-    subprocess.Popen(["rm", "./python/system_related/*.log"])
+    # remove_interface(interfaces) #TODO: Change from dummy to peer
+    end = time.time()
+    print("Runtime:",end-start)
     
 if __name__ == "__main__":
     main()
