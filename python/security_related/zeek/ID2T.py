@@ -42,10 +42,11 @@ def process_zeek_logs_ID2T():
     df_zeek = pd.merge(df_conn, df_notice, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto'])
 
     df_zeek['flow_alerted'] = df_zeek['flow_alerted'].fillna(False)
-    df_zeek["start_time"] = df_zeek["start_time"].round().astype(int)
+    df_zeek["start_time"] = df_zeek["start_time"].astype(int)
+    df_zeek = df_zeek.drop_duplicates(subset=["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"])
 
     # This part prepares the ground truth based on the output of ID2T and flows taken from zeek's conn.log
-    xml_file = '../traffic_generators/ID2T/output/smallFlows_output_labels.xml'
+    xml_file = '../traffic_generators/id2t/output/smallFlows_output_labels.xml'
     tree = ET.parse(xml_file)
     root = tree.getroot()
 
@@ -56,7 +57,7 @@ def process_zeek_logs_ID2T():
 
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
-    id2t_pcap = 'traffic_generators/ID2T/output/smallFlows_output.pcap'
+    id2t_pcap = 'traffic_generators/id2t/output/smallFlows_output.pcap'
     cmd = [
         "sudo", 
         "docker", 
@@ -82,7 +83,7 @@ def process_zeek_logs_ID2T():
     df_gt.columns = cols
 
     df_gt = df_gt[["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"]]
-    df_gt["start_time"] = df_gt["start_time"].round().astype(int)
+    df_gt["start_time"] = df_gt["start_time"].astype(int)
     df_gt['flow_alerted'] = (df_gt['start_time'] >= timestamp_start) & (df_gt['start_time'] <= timestamp_end)
 
 

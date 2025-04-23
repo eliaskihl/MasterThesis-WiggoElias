@@ -38,7 +38,7 @@ def run_traffic_generator(traffic_generator, attack):
             "id2t-container",  
             "bash", 
             "-c",
-            f"./id2t -i ../traffic/input_pcap/smallFlows.pcap -o ../traffic/output/smallFlows_output.pcap -a {attack} ip.src=192.168.178.2 mac.src=32:08:24:DC:8D:27 inject.at-timestamp=0"
+            f"./id2t -i ../traffic_generators/id2t/input_pcap/smallFlows.pcap -o ../traffic_generators/id2t/output/smallFlows_output.pcap -a {attack} inject.at-timestamp=0"
         ]
         process = subprocess.Popen(cmd)
         process.wait()
@@ -117,7 +117,7 @@ def main():
     if args.traffic_generator:
         run_traffic_generator(args.traffic_generator, args.attack)
         if args.traffic_generator == 'ID2T':
-            run_suricata_on_pcap('../traffic_generators/ID2T/output/smallFlows_output.pcap')
+            run_suricata_on_pcap('../traffic_generators/id2t/output/smallFlows_output.pcap')
 
             tp, fp, fn, tn, noAlerts = process_suricata_logs_ID2T()
 
@@ -133,7 +133,10 @@ def main():
         if args.dataset not in dataset_mapping:
             raise ValueError("Invalid dataset. Choose from: " + ", ".join(dataset_mapping.keys()))
         
-        path_to_pcap = os.path.join(dataset_mapping[args.dataset], "pcap", args.pcap)
+        if args.dataset == 'UNSW-NB15':
+            path_to_pcap = os.path.join(dataset_mapping[args.dataset], "pcap", args.pcap.removesuffix('.pcap'), args.pcap)
+        else:
+            path_to_pcap = os.path.join(dataset_mapping[args.dataset], "pcap", args.pcap)
         
         run_suricata_on_pcap(path_to_pcap)
         

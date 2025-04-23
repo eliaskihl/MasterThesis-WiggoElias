@@ -6,8 +6,8 @@ def process_zeek_logs_UNSWNB15(pcap_file):
     
     pd.set_option('future.no_silent_downcasting', True)
     pcap_to_gt_map = {
-    "../datasets/UNSW-NB15/pcap/1.pcap": "../datasets/UNSW-NB15/ground_truth/ground_truth_1.csv",
-    "../datasets/UNSW-NB15/pcap/2.pcap": "../datasets/UNSW-NB15/ground_truth/ground_truth_2.csv",
+    "../datasets/UNSW-NB15/pcap/22-1-2015/22-1-2015.pcap": "../datasets/UNSW-NB15/ground_truth/22-1-2015.csv",
+    "../datasets/UNSW-NB15/pcap/17-2-2015/17-2-2015.pcap": "../datasets/UNSW-NB15/ground_truth/17-2-2015.csv",
 }
     gt_path = pcap_to_gt_map.get(pcap_file)  
 
