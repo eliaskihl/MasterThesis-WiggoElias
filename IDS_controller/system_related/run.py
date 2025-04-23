@@ -1,8 +1,3 @@
-# Run zeekctl
-# Deploy workers
-# https://dl.acm.org/doi/pdf/10.1145/2716260
-
-
 import argparse
 from collections import defaultdict
 import time
@@ -15,6 +10,11 @@ import glob
 import os
 import gzip
 from threading import Thread
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+from python.system_related.run_all import check_tcpreplay_throughput, restart_interface
+
+
 def revert_init_controller():
     # Comments out the required lines for Zeekctl to begin
     
@@ -181,14 +181,8 @@ def remove_logs():
     subprocess.run(f"sudo rm -rf {directory}", shell=True, check=True)
         
 
-def log_performance(log_file,tcp_proc,interface):
-    
-    # Get the starting network statistics (of the interaface)
-    # old_net = psutil.net_io_counters(pernic=True)[interface]
-    # old_bytes_sent = old_net.bytes_sent
-    # old_bytes_recv = old_net.bytes_recv
-
-
+def log_performance(log_file,tcp_proc):
+    print("logging")
     # Logs CPU & memory usage of the IDS process every 5 seconds 
     with open(log_file, "w", newline="") as f:
         # Writes to csv
@@ -220,18 +214,7 @@ def log_performance(log_file,tcp_proc,interface):
                     tot_mem = psutil.virtual_memory().total
                     memory_percentage = (rss_mem / tot_mem) * 100
                    
-                    # Get the network statistics (of the interaface)
-                    # cur_net = psutil.net_io_counters(pernic=True)[interface]
-                    # Time difference = 5 beacuse of time.sleep(5) below
-                    
-                    # sent_over_time = (cur_net.bytes_sent - old_bytes_sent) / 5
-                    # recv_over_time = (cur_net.bytes_recv - old_bytes_recv) / 5
-                    # uploading_speed = sent_over_time / 1024 # Tranfers the speed into kilo bytes
-                    # download_speed = recv_over_time / 1024
-
-                    # Update values
-                    # old_bytes_sent = cur_net.bytes_sent
-                    # old_bytes_recv = cur_net.bytes_recv
+                   
                     
                     writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"),role,cpu_usage, memory_percentage])
                     f.flush()
@@ -258,12 +241,13 @@ def extract_tcpreplay_drop_rate(speed,dict_for_drop_rates):
     # Recorded total packets by zeekctl
     for role, packets_tuple in dict_for_drop_rates.items():
         zeek_total_packets,_ = packets_tuple 
-        tcpreplay_drop_rate = 0 if zeek_total_packets <= 0 else (1-zeek_total_packets/tcpreplay_total_packets)*100 # TODO: What happens zeekctl records more packets than tcpreplay (should not happen)
+        tcpreplay_drop_rate = 0 if zeek_total_packets <= 0 or zeek_total_packets >= tcpreplay_total_packets else (1-zeek_total_packets/tcpreplay_total_packets)*100 
         print("Actual drop rate:",tcpreplay_drop_rate)
         with open(f"./zeekctl/perf_files/tcpreplay_drop_rate_{role}_{speed}.txt", "w") as f: 
                 f.write(str(tcpreplay_drop_rate)) # Precentage
-## Scalability test
-# increase worker/proxy/logger size and throughput
+
+
+
 def run(interface, speed, loop):
 
     
@@ -295,20 +279,20 @@ def run(interface, speed, loop):
     print("Starting tcp replay...")
     with open(f"./zeekctl/tmp/temp_tcpreplay.log", "w") as temp, \
         open(f"./zeekctl/tmp/err_tcpreplay.log", "w") as err:
-        print("Current Working Directory:", os.getcwd())
+        
         command = [
-            "sudo",
-            "docker",
-            "exec",
-            f"{"zeek-container"}",  # Replace with the actual container name (snort-container, etc.)
-            "bash",             # Start a bash shell
-            "-c",               # Execute the following command
-            f"tcpreplay -P --stats=1 -i {interface} --loop={loop} --mbps={speed} /pcap/smallFlows.pcap"
+        "docker", "exec", 
+        "zeek-container",
+        "tcpreplay",
+        "-i", interface,
+        f"--loop={loop}",
+        f"--mbps={speed}",
+        "/pcap/smallFlows.pcap"
         ]
         # command = ["sudo", "tcpreplay", "-P", "--stats=1", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./python/system_related/pcap/smallFlows.pcap"]
         tcpreplay_proc = subprocess.Popen(command,stdout=temp, stderr=err)
     # Log performance in seperate thread while zeekctl is running and until tcpreplay is done
-    monitor_thread = Thread(target=log_performance, args=(filepath, tcpreplay_proc,interface))
+    monitor_thread = Thread(target=log_performance, args=(filepath, tcpreplay_proc))
     monitor_thread.start()
     time.sleep(1)
     # Wait / Terminate tcp replay
@@ -338,8 +322,13 @@ def run(interface, speed, loop):
     # End / join thread
     print("Terminating monitor thread")
     monitor_thread.join()
+    time.sleep(2)
+    if not check_tcpreplay_throughput("zeekctl",speed): # If not a match then restart 
+        run(interface,speed,loop) 
+
+
     # Wait for values to be updated
-    time.sleep(20)
+    time.sleep(10)
     # Two methods of extracting the drop rate, which one is the best?
     update_and_clean_docker_logs()
     dict_for_drop_rates = extract_drop_rate_zeekctl() # Return a dictionary with all roles and their respective total packets and dropped packet as a tuple 
@@ -529,8 +518,10 @@ def count_crashed_nodes():
             if delta > THRESHOLD: # Compare to Threshold
                 counter += 1
 
-    print(results)     
+    print(results)
+    return results     
     # TODO: Missing the logger
+
 
 
 def main():
@@ -540,14 +531,26 @@ def main():
     parser.add_argument("interface",help="Which interface should the IDSs be run on?")
     args = parser.parse_args()
     loop = 10
-    speed = 10
     
-   
+    remove_logs()
+    restart_interface(args.interface)
+    interface = args.interface+"_host"
+    for i in range(10,61,10):
+        run(interface,i,loop)
+        crashed_nodes = count_crashed_nodes()
+        latencies = measure_latency()
+        with open(f"./zeekctl/perf_files/count_crashed_{i}.txt", "w") as f: 
+                f.write(str(crashed_nodes)) 
+        with open(f"./zeekctl/perf_files/latencies_{i}.txt", "w") as f: 
+                f.write(str(latencies)) 
+        remove_logs()
+    # TODO: Should these be inside the loop?
     
-    run(args.interface,speed,loop)
-    # Remove logs
-    count_crashed_nodes()
-    # latencies = measure_latency()
+    print("----------------------------------")
+    print(crashed_nodes)
+    print("----------------------------------")
+    print(latencies)
+    print("----------------------------------")
     remove_logs()
     
     # visualize()

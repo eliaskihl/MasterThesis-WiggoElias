@@ -36,6 +36,11 @@ TOOLS = {
         "dir": "IDS_controller/system_related",
         "script": "run.py",
     },
+        "controllervis": {
+        "dir": "IDS_controller/system_related",
+        "script": "vis.py",
+    },
+
     
 
 }
