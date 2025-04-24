@@ -46,16 +46,16 @@ def calc_mean(df,speed):
     list_of_drop_rates_tcpreplay = []
     for role in list_of_roles:
         
-        drop_file = f"./zeekctl/perf_files/drop_rate_{role}_{speed}.txt"
+        # drop_file = f"./zeekctl/perf_files/drop_rate_{role}_{speed}.txt"
         total_file = f"./zeekctl/perf_files/total_packets_{role}_{speed}.txt"
         tcp_drop_file = f"./zeekctl/perf_files/tcpreplay_drop_rate_{role}_{speed}.txt" 
-        if os.path.exists(drop_file):
-            with open(drop_file, "r") as f:
-                drop_rate = float(f.read())
-        else:
-                drop_rate = 0.0
+        # if os.path.exists(drop_file):
+        #     with open(drop_file, "r") as f:
+        #         drop_rate = float(f.read())
+        # else:
+        #         drop_rate = 0.0
 
-        list_of_drop_rates_values.append(drop_rate)
+        # list_of_drop_rates_values.append(drop_rate)
 
         if os.path.exists(total_file):
             with open(total_file, "r") as f:
@@ -74,8 +74,8 @@ def calc_mean(df,speed):
 
         list_of_drop_rates_tcpreplay.append(acc_drop_rate)
 
-    avg_usage["Drop_Rate"] = list_of_drop_rates_values
-    avg_usage["Actual_Drop_Rate"] = list_of_drop_rates_tcpreplay
+    # avg_usage["Drop_Rate"] = list_of_drop_rates_values
+    avg_usage["Drop_Rate"] = list_of_drop_rates_tcpreplay
     avg_usage["Total_Packets"] = list_of_total_packets
     print("list",list_of_roles)
     print("avg_usge:",avg_usage)
@@ -107,7 +107,7 @@ def visualize():
         
         print("first_Df:",df)
         
-        pivot_df = df.pivot_table(index="Speeds", columns="Role", values=["CPU_Usage", "Memory_Usage", "Drop_Rate", "Total_Packets", "Actual_Drop_Rate"])
+        pivot_df = df.pivot_table(index="Speeds", columns="Role", values=["CPU_Usage", "Memory_Usage", "Drop_Rate", "Total_Packets"])
         pivot_df.columns = [f"{col[1]}_{col[0]}" for col in pivot_df.columns] # Keep the CPU and Memory labels in the column names
         pivot_df.reset_index(inplace=True)
         print("pivot:",pivot_df)
@@ -131,14 +131,20 @@ def visualize():
     cpu_names=[]
     mem_names=[]
     drop_names=[]
-    acc_drop_names=[]
+    # acc_drop_names=[]
     total_names=[]
     for i in list_of_roles:
         cpu_names.append(f"{i}_CPU_Usage")
         mem_names.append(f"{i}_Memory_Usage")
         drop_names.append(f"{i}_Drop_Rate")
-        acc_drop_names.append(f"{i}_Actual_Drop_Rate")
+        # acc_drop_names.append(f"{i}_Actual_Drop_Rate")
         total_names.append(f"{i}_Total_Packets")
+
+    # Save csv
+    if not os.path.exists(f"../../tables/controller/"):
+        os.makedirs(f"../../tables/controller/")
+    final_df.to_csv(f"../../tables/controller/syseval.csv")
+    print("saved")
 
     final_df.plot(x="Speeds", y=cpu_names, kind="bar", figsize=(width,height), label=list_of_roles)
     plt.title(f"CPU Usage Zeekctl")
@@ -164,13 +170,13 @@ def visualize():
     plt.savefig(f"../../img/controller/drop_rate.png")
     plt.clf()  # Clear the figure
 
-    final_df.plot(x="Speeds", y=acc_drop_names, kind="bar", figsize=(width,height),  label=list_of_roles)
-    plt.title(f"Actual Drop Rate Zeekctl")
-    plt.ylabel("Drop Rate (%)")
-    plt.xlabel("Throughput (Mbps)")
-    print("Saving plot Actual Drop Rate")
-    plt.savefig(f"../../img/controller/actual_drop_rate.png")
-    plt.clf()  # Clear the figure
+    # final_df.plot(x="Speeds", y=acc_drop_names, kind="bar", figsize=(width,height),  label=list_of_roles)
+    # plt.title(f"Actual Drop Rate Zeekctl")
+    # plt.ylabel("Drop Rate (%)")
+    # plt.xlabel("Throughput (Mbps)")
+    # print("Saving plot Actual Drop Rate")
+    # plt.savefig(f"../../img/controller/actual_drop_rate.png")
+    # plt.clf()  # Clear the figure
 
     final_df.plot(x="Speeds", y=total_names, kind="bar", figsize=(width,height),  label=list_of_roles)
     plt.title(f"Total Packets Zeekctl")

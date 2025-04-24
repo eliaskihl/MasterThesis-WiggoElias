@@ -40,6 +40,10 @@ TOOLS = {
         "dir": "IDS_controller/system_related",
         "script": "vis.py",
     },
+        "table": {
+        "dir": ".",
+        "script": "table_generation.py",
+    },
 
     
 

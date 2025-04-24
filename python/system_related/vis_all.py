@@ -54,6 +54,10 @@ def natural_sort(file_list):
     return sorted(file_list, key=lambda s: [int(t) if t.isdigit() else t.lower()
                                             for t in re.split(r'(\d+)', s)])
 def visualize(folder):
+    x_value = "Throughput"
+    if folder == "latency":
+        x_value = "Latency"
+   
     speeds = []
     cpus = []
     mems = []
@@ -80,7 +84,8 @@ def visualize(folder):
             with open(f"./{folder}/{name}/perf_files/total_packets_{speed}.txt", "r") as f:
                total_packets = float(f.read())
                packet_analysis_rate.append(total_packets/60)
-        dfs[name] = pd.DataFrame({"Speed":speeds, "CPU":cpus, "Memory":mems, "Drop Rate":drop_rates, "Packet Analysis Rate":packet_analysis_rate, "Total Packets Sent":total_packets})
+        dfs[name] = pd.DataFrame({x_value:speeds, "CPU_Usage":cpus, "Memory_Usage":mems, "Drop_Rate":drop_rates, 
+                                  "Packet_Analysis_Rate":packet_analysis_rate, "Total_Packets_Sent":total_packets})
         # Clear
         speeds = []
         cpus = []
@@ -94,40 +99,47 @@ def visualize(folder):
     print(df_sur)
     print(df_snort)
     print(df_zeek)
-    # Merge based on "Speed"
-    df = pd.merge(df_sur, df_snort, on="Speed", suffixes=('_suricata', '_snort'))
+    # Merge based on "Speed" / "Latency"
+    df = pd.merge(df_sur, df_snort, on=x_value, suffixes=('_suricata', '_snort'))
     print(df)
     print("")
-    df = pd.merge(df_zeek, df, on="Speed", suffixes=('_zeek', ''))
+    df = pd.merge(df_zeek, df, on=x_value, suffixes=('_zeek', ''))
     print(df)
     # Change name of column "CPU" to "CPU_zeek"
-    df.rename(columns={"CPU":"CPU_zeek", "Memory":"Memory_zeek", "Drop Rate":"Drop Rate_zeek", "Packet Analysis Rate":"Packet Analysis Rate_zeek", "Total Packets Sent":"Total Packets Sent_zeek"}, inplace=True)
+    df.rename(columns={"CPU_Usage":"CPU_Usage_zeek", "Memory_Usage":"Memory_Usage_zeek", "Drop_Rate":"Drop_Rate_zeek", 
+                       "Packet_Analysis_Rate":"Packet_Analysis_Rate_zeek", "Total_Packets_Sent":"Total_Packets_Sent_zeek"}, inplace=True)
     print(df)
-    
+    # Save dataframe in a folder
+    if not os.path.exists(f"../../tables/{folder}/"):
+        os.makedirs(f"../../tables/{folder}/")
+        df.to_csv(f"../../tables/{folder}/syseval.csv")
+
+
     if not os.path.exists(f"../../img/{folder}/"):
-        os.mkdir(f"../../img/{folder}/")
+        os.makedirs(f"../../img/{folder}/")
+        
     
     width,height = 8,6
     x_title = "Throughput (Mbps)"
     if folder == "latency":
-        x_title = "Latency (qs)"
-    df.plot(x="Speed", y=["CPU_suricata", "CPU_snort","CPU_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "snort", "Zeek"])
+        x_title = "Latency (us)"
+    df.plot(x=x_value, y=["CPU_Usage_suricata", "CPU_Usage_snort","CPU_Usage_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "snort", "Zeek"])
     plt.title(f"Average CPU Usage")
-    plt.ylabel("CPU (%)")
+    plt.ylabel("CPU Usage (%)")
     plt.xlabel(f"{x_title}")
     print("Saving plot CPU")
     plt.savefig(f"../../img/{folder}/cpu.png")
     plt.clf()  # Clear the figure
 
-    df.plot(x="Speed", y=["Memory_suricata", "Memory_snort","Memory_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "snort", "Zeek"])
+    df.plot(x=x_value, y=["Memory_Usage_suricata", "Memory_Usage_snort","Memory_Usage_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort", "Zeek"])
     plt.title(f"Average Memory Usage")
-    plt.ylabel("Memory (%)")
+    plt.ylabel("Memory Usage (%)")
     plt.xlabel(f"{x_title}")
     print("Saving plot Memory")
     plt.savefig(f"../../img/{folder}/memory.png")
     plt.clf()  # Clear the figure
 
-    df.plot(x="Speed", y=["Drop Rate_suricata", "Drop Rate_snort","Drop Rate_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "snort", "Zeek"])
+    df.plot(x=x_value, y=["Drop_Rate_suricata", "Drop_Rate_snort","Drop_Rate_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort", "Zeek"])
     plt.title(f"Drop Rate")
     plt.ylabel("Drop Rate (%)")
     plt.xlabel(f"{x_title}")
@@ -135,20 +147,20 @@ def visualize(folder):
     plt.savefig(f"../../img/{folder}/drop_rate.png")
     plt.clf()  # Clear the figure
 
-    df.plot(x="Speed", y=["Packet Analysis Rate_suricata", "Packet Analysis Rate_snort","Packet Analysis Rate_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "snort", "Zeek"])
+    df.plot(x=x_value, y=["Packet_Analysis_Rate_suricata", "Packet_Analysis_Rate_snort","Packet_Analysis_Rate_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort", "Zeek"])
     plt.title(f"Packet Analysis")
-    plt.ylabel("Packet Analysis Rate (packets/seconds)")
+    plt.ylabel("Packet Analysis Rate (packets/minute)")
     plt.xlabel(f"{x_title}")
     print("Saving plot Packet Analysis Rate")
     plt.savefig(f"../../img/{folder}/packet_analysis_rate.png")
     plt.clf()  # Clear the figure
 
-    df.plot(x="Speed", y=["Total Packets Sent_suricata", "Total Packets Sent_snort","Total Packets Sent_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "snort", "Zeek"])
+    df.plot(x=x_value, y=["Total_Packets_Sent_suricata", "Total_Packets_Sent_snort","Total_Packets_Sent_zeek"], kind="bar", figsize=(width,height), label=["Suricata", "Snort", "Zeek"])
     plt.title(f"Total Packets Sent")
     plt.ylabel("Total Packets Sent (packets)")
     plt.xlabel(f"{x_title}")
     print("Saving plot Total Packets Sent")
-    plt.savefig(f"../../img/{folder}/packet_analysis_rate.png")
+    plt.savefig(f"../../img/{folder}/total_packets_sent.png")
     plt.clf()  # Clear the figure
 
 def main():
