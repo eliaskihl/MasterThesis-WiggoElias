@@ -5,6 +5,92 @@ import glob
 import os
 import re
 import argparse
+import networkx as nx
+import pickle
+import seaborn as sns
+
+def crashed_plot(throughput):
+    with open(f"./zeekctl/perf_files/count_crashed_{str(throughput)}.txt", "rb") as file:
+        crashes = eval(file.read())
+    N = len(crashes.keys())
+    df = pd.Series(np.random.randint(10,50,N), index=np.arange(1,N+1))
+
+    cmap = plt.cm.tab10
+
+    roles = list(crashes.keys())
+    freq = list(crashes.values())
+    data = pd.DataFrame(list(zip(roles,freq)),columns=["role","freq"])
+
+    colors = cmap(np.arange(len(df)) % cmap.N)
+    sns.set_style("whitegrid")
+    sns.barplot(data,x="role",y="freq",palette='Set1')
+
+    plt.xlabel('')
+    plt.ylabel("Number of shutdowns")
+    plt.title("Number of shutdowns per node")
+    plt.savefig(f"../../img/controller/crashed_nodes_{str(throughput)}.png")
+
+def latency_plot(throughput):
+    
+    with open(f"./zeekctl/perf_files/latencies_{str(throughput)}.txt", "rb") as file:
+        latencies = eval(file.read())
+
+    G = nx.MultiDiGraph()  # Supports directional and multiple edges
+
+    # Build graph
+    for (src, dst), latency in latencies.items():
+        G.add_edge(src, dst, weight=latency)
+
+    # Layout
+    pos = nx.spring_layout(G, k=2, iterations=25, seed=42)
+
+    plt.figure(figsize=(10, 7))
+    plt.title(f"Node-to-Node Latency Map | Zeekctl | Throughput: {str(throughput)}")
+
+    # Draw nodes
+    nx.draw_networkx_nodes(G, pos, node_color='skyblue', node_size=800)
+    nx.draw_networkx_labels(G, pos, font_size=10)
+
+    # Draw curved edges with arrows
+    nx.draw_networkx_edges(
+        G, pos,
+        edgelist=G.edges(keys=True),
+        edge_color='gray',
+        width=2,
+        arrows=True,
+        arrowsize=30
+    )
+
+    # Edge labels with better positioning
+    edge_labels = {
+        (u, v): f"{d['weight']*800:.2f} ms"
+        for u, v, k, d in G.edges(keys=True, data=True)
+    }
+
+    # Automatically calculate positions for edge labels based on midpoints of the edges
+    edge_label_pos = {}
+    for (u, v) in edge_labels:
+        x_pos = (pos[u][0] + pos[v][0]) / 2
+        y_pos = (pos[u][1] + pos[v][1]) / 2
+        edge_label_pos[(u, v)] = (x_pos, y_pos)
+
+    # Draw edge labels with corrected positions (without redundant method)
+    nx.draw_networkx_edge_labels(
+        G, pos,
+        edge_labels=edge_labels,
+        font_size=8,
+        font_color='black',
+        bbox=dict(facecolor='white', edgecolor='none', boxstyle="round,pad=0.3"),
+        font_weight='bold',
+        horizontalalignment='center',
+        verticalalignment='center'
+    )
+
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig(f"../../img/controller/latency_network_{str(throughput)}.png")
+    plt.close()
+
 
 def extract_network_usage(df):
     # Extract the two column with network upload and download speed
@@ -99,6 +185,10 @@ def visualize():
         
         df, list_of_roles = calc_mean(df,speed)
         
+        # for speed value get latency and shutdown plots
+        crashed_plot(speed)
+        latency_plot(speed)
+
         for i in range(len(list_of_roles)):
             speeds.append(speed)
         print(speeds)
@@ -188,7 +278,6 @@ def visualize():
     # plt.savefig(f"../.../../img/{folder}/total_packets_sent.png")
     # Network plot
     #network_plot(network_dict)
-    
 
     
 
@@ -196,7 +285,9 @@ def visualize():
 def main():
     print("Current Working Directory:", os.getcwd())
     parser = argparse.ArgumentParser(description="Run system performance visualization on Zeekctl")
+    
     visualize()
 
 if __name__ == "__main__":
     main()
+

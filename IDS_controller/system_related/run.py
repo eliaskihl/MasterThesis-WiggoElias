@@ -182,7 +182,7 @@ def remove_logs():
         
 
 def log_performance(log_file,tcp_proc):
-    print("logging")
+    
     # Logs CPU & memory usage of the IDS process every 5 seconds 
     with open(log_file, "w", newline="") as f:
         # Writes to csv
@@ -324,6 +324,7 @@ def run(interface, speed, loop):
     monitor_thread.join()
     time.sleep(2)
     if not check_tcpreplay_throughput("zeekctl",speed): # If not a match then restart 
+        #remove_logs() 
         run(interface,speed,loop) 
 
 
@@ -400,7 +401,7 @@ def measure_latency():
     roles = {}
     for path in file_paths:
         print(path)
-        subprocess.run(["sudo", "gzip", "-d", path])
+        # subprocess.run(["sudo", "gzip", "-d", path])
         temp_dict = {}
         try:
             with open_maybe_gzipped(path) as file:
@@ -531,28 +532,27 @@ def main():
     parser.add_argument("interface",help="Which interface should the IDSs be run on?")
     args = parser.parse_args()
     loop = 10
+    first = 50
+    last = 61
+    step = 10
     
-    remove_logs()
+    #remove_logs() 
     restart_interface(args.interface)
     interface = args.interface+"_host"
-    for i in range(10,61,10):
+    for i in range(first,last,step):
         run(interface,i,loop)
         crashed_nodes = count_crashed_nodes()
         latencies = measure_latency()
+
         with open(f"./zeekctl/perf_files/count_crashed_{i}.txt", "w") as f: 
                 f.write(str(crashed_nodes)) 
         with open(f"./zeekctl/perf_files/latencies_{i}.txt", "w") as f: 
                 f.write(str(latencies)) 
-        remove_logs()
-    # TODO: Should these be inside the loop?
+        exit(0)
+        #remove_logs() 
     
-    print("----------------------------------")
-    print(crashed_nodes)
-    print("----------------------------------")
-    print(latencies)
-    print("----------------------------------")
-    remove_logs()
     
+    #remove_logs()     
     # visualize()
     
     
@@ -560,8 +560,6 @@ if __name__ == "__main__":
     main()
 
 
-# TODO: Number of closed connections (natural and unnatural)
-# TODO: Change to docker
 
 
 
