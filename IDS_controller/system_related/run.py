@@ -16,11 +16,11 @@ from python.system_related.run_all import check_tcpreplay_throughput, restart_in
 
 
 def revert_init_controller():
-    # Comments out the required lines for Zeekctl to begin
+    # Comments the required lines for Zeekctl to begin
     
     new_lines = []
     counter = 0
-    filepath ="/usr/local/zeek/etc/node.cfg"
+    filepath ="./../../python/ids_configuration/zeek/config/zeek/node.cfg"
     with open(filepath, "r") as file:
         for line in file:
         # [zeek]
@@ -29,8 +29,9 @@ def revert_init_controller():
         # interface=eth0
             start = re.search(r"\s*#\[zeek\]\s*",line)
             if start or (counter >= 1 and counter < 4):
-                line = line.split("#")
-                new_lines.append(line[-1])
+                
+                text = line.replace('#','')
+                new_lines.append(text)
                 counter += 1
             else:
                 new_lines.append(line)
@@ -114,6 +115,21 @@ def deploy_logger(num):
     with open(filepath,"a") as file:
         file.writelines(new_lines)
 
+def remove_all():
+    new_lines = []
+    filepath ="./../../python/ids_configuration/zeek/config/zeek/node.cfg"
+    passed = False
+    with open(filepath, "r") as file:
+        for line in file:
+            if not passed:
+                new_lines.append(line)
+            elif passed:
+                pass
+            if "remove the [zeek] node above." in line:
+                passed = True
+    with open(filepath,"w") as file:
+        file.writelines(new_lines)
+
 def remove(type,idx=0):
     new_lines = []
     counter = 0
@@ -138,9 +154,31 @@ def remove(type,idx=0):
     with open(filepath,"w") as file:
         file.writelines(new_lines)
 
+def check_all_worker_interfaces(interface):
+    new_lines = []
+    filepath ="./../../python/ids_configuration/zeek/config/zeek/node.cfg"
+    # interface=veth_host
+    with open(filepath,"r") as file:
+        for line in file:
+            if "interface" in line and not  f"{interface}" in line and '#' not in line:
+                new_lines.append(f"interface={interface}\n")
+            else:
+                new_lines.append(line)
+    with open(filepath,"w") as file:
+        file.writelines(new_lines)   
 
-def get_zeek_role(cmdline):
+def deploy(interface,workers=1,proxys=1,managers=1,loggers=1):
     
+    for i in range(workers):
+        deploy_worker((i+1),interface)
+    for i in range(loggers):
+        deploy_logger((i+1))
+    for i in range(proxys):
+        deploy_proxy((i+1))
+    for i in range(managers):
+        deploy_manager()
+
+def get_zeek_role(cmdline):  
     match = re.search(r"-p\s+(logger-(\d+)|manager|proxy-(\d+)|worker-(\d+))",cmdline)
     return match.group(1) if match else "Unknown"
 
@@ -152,6 +190,7 @@ def extract_drop_rate_zeekctl():
     stats_path = f"./../../python/ids_configuration/zeek/logs/{str(today)}/stats.*.log.gz"
     file_paths = glob.glob(stats_path)
     print(file_paths)
+    
     roles = {}
     for path in file_paths:
         print(path)
@@ -168,9 +207,15 @@ def extract_drop_rate_zeekctl():
                 pkts_dropped = 0 if fields[5] == "-" else int(fields[5])
                 # Update roles dict with Role: (Processed packets, Dropped packets)
                 print("role",role,"tot",pkts_proc,"drop",pkts_dropped)
-                roles.update({role:(pkts_proc,pkts_dropped)})
+                
+                # If the role already exists in the dictionary, append (sum) the values
+                if role in roles:
+                    existing_pkts_proc, existing_pkts_dropped = roles[role]
+                    roles[role] = (existing_pkts_proc + pkts_proc, existing_pkts_dropped + pkts_dropped)
+                else:
+                    roles[role] = (pkts_proc, pkts_dropped)
     
-    time.sleep(5)
+        # If there is more than one path only the last one will be used?
     return roles 
 
 def remove_logs():
@@ -249,103 +294,107 @@ def extract_tcpreplay_drop_rate(speed,dict_for_drop_rates):
 
 
 def run(interface, speed, loop):
-
-    
-    if not os.path.exists(f"./zeekctl/perf_files"):
-        print("Directory not found, creating directory...")
-        os.makedirs(f"./zeekctl/perf_files")
-    filepath = f"./zeekctl/perf_files/ids_performance_log_{speed}.csv"
-    # Start IDS as a subprocess
-    print(f"Starting zeekctl...")
-    if not os.path.exists(f"./tcp_replay/tmp/"):
-        print("Directory not found, creating directory...")
-        os.makedirs(f"./zeekctl/tmp/", exist_ok=True)
-    with open(f"./zeekctl/tmp/temp.log", "w") as temp, \
-        open(f"./zeekctl/tmp/err.log", "w") as err:  
-        command = [
-            "sudo",
-            "docker",
-            "exec",
+    tries = 0
+    while True:
+        if not os.path.exists(f"./zeekctl/perf_files"):
+            print("Directory not found, creating directory...")
+            os.makedirs(f"./zeekctl/perf_files")
+        filepath = f"./zeekctl/perf_files/ids_performance_log_{speed}.csv"
+        # Start IDS as a subprocess
+        print(f"Starting zeekctl...")
+        if not os.path.exists(f"./tcp_replay/tmp/"):
+            print("Directory not found, creating directory...")
+            os.makedirs(f"./zeekctl/tmp/", exist_ok=True)
+        with open(f"./zeekctl/tmp/temp.log", "w") as temp, \
+            open(f"./zeekctl/tmp/err.log", "w") as err:  
+            command = [
+                "sudo",
+                "docker",
+                "exec",
+                "zeek-container",
+                "bash",
+                "-c",
+                f"cd logs && zeekctl deploy"
+            ]
+            # command = ["sudo", zeekctl_path, "deploy"]
+            ids_proc = subprocess.Popen(command, stdout=temp, stderr=err)
+        # Wait for start of zeekctl
+        wait_for_zeekctl()
+        # Start tcp replay
+        print("Starting tcp replay...")
+        with open(f"./zeekctl/tmp/temp_tcpreplay.log", "w") as temp, \
+            open(f"./zeekctl/tmp/err_tcpreplay.log", "w") as err:
+            
+            command = [
+            "docker", "exec", 
             "zeek-container",
-            "bash",
-            "-c",
-            f"cd logs && zeekctl deploy"
+            "tcpreplay",
+            "-i", interface,
+            f"--loop={loop}",
+            f"--mbps={speed}",
+            "/pcap/smallFlows.pcap"
+            ]
+            # command = ["sudo", "tcpreplay", "-P", "--stats=1", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./python/system_related/pcap/smallFlows.pcap"]
+            tcpreplay_proc = subprocess.Popen(command,stdout=temp, stderr=err)
+        # Log performance in seperate thread while zeekctl is running and until tcpreplay is done
+        monitor_thread = Thread(target=log_performance, args=(filepath, tcpreplay_proc))
+        monitor_thread.start()
+        time.sleep(1)
+        # Wait / Terminate tcp replay
+        print("Wait for TCP replay to finish")
+        tcpreplay_proc.wait()
+        time.sleep(1)
+        print(f"Terminating tcpreplay..")
+        tcpreplay_proc.terminate()
+        time.sleep(2)
+        # Wait / Terminate ids_proc
+        print(f"Termating zeekctl..")
+        time.sleep(1)
+        print(f"Wait for zeekctl to finish")
+        ids_proc.wait()
+        command = [
+                "sudo",
+                "docker",
+                "exec",
+                "zeek-container",
+                "bash",
+                "-c",
+                f"cd logs && zeekctl stop"
         ]
-        # command = ["sudo", zeekctl_path, "deploy"]
-        ids_proc = subprocess.Popen(command, stdout=temp, stderr=err)
-    # Wait for start of zeekctl
-    wait_for_zeekctl()
-    # Start tcp replay
-    print("Starting tcp replay...")
-    with open(f"./zeekctl/tmp/temp_tcpreplay.log", "w") as temp, \
-        open(f"./zeekctl/tmp/err_tcpreplay.log", "w") as err:
+        # command = ["sudo", zeekctl_path, "stop"]
+        subprocess.Popen(command)
+
+        # End / join thread
+        print("Terminating monitor thread")
+        monitor_thread.join()
+        time.sleep(2)
+        if check_tcpreplay_throughput("zeekctl",speed): # If not a match then restart 
+            
+            # Wait for values to be updated
+            time.sleep(10)
+            # Two methods of extracting the drop rate, which one is the best?
+            update_and_clean_docker_logs()
+            dict_for_drop_rates = extract_drop_rate_zeekctl() # Return a dictionary with all roles and their respective total packets and dropped packet as a tuple 
+            # Write drop rate to file
+            total_packets_var = 0
+            for role, packets_tuple in dict_for_drop_rates.items():
+                total_packets,dropped_packets = packets_tuple 
+                total_packets_var += total_packets
+                drop_rate = 0 if total_packets <= 0 else (dropped_packets/total_packets)*100
+                with open(f"./zeekctl/perf_files/drop_rate_{role}_{speed}.txt", "w") as f:
+                    f.write(str(drop_rate))
+                with open(f"./zeekctl/perf_files/total_packets_{role}_{speed}.txt", "w") as f:
+                    f.write(str(total_packets))
+            # According to tcp replay the drop rate is higher than zeekctl has recorded
+            extract_tcpreplay_drop_rate(speed,dict_for_drop_rates)
+            break
+        else:
+            tries+=1
+            print("Number of tries:",tries)
+            update_and_clean_docker_logs()
+            remove_logs()
+            restart_interface(interface.replace("_host",'')) 
         
-        command = [
-        "docker", "exec", 
-        "zeek-container",
-        "tcpreplay",
-        "-i", interface,
-        f"--loop={loop}",
-        f"--mbps={speed}",
-        "/pcap/smallFlows.pcap"
-        ]
-        # command = ["sudo", "tcpreplay", "-P", "--stats=1", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./python/system_related/pcap/smallFlows.pcap"]
-        tcpreplay_proc = subprocess.Popen(command,stdout=temp, stderr=err)
-    # Log performance in seperate thread while zeekctl is running and until tcpreplay is done
-    monitor_thread = Thread(target=log_performance, args=(filepath, tcpreplay_proc))
-    monitor_thread.start()
-    time.sleep(1)
-    # Wait / Terminate tcp replay
-    print("Wait for TCP replay to finish")
-    tcpreplay_proc.wait()
-    time.sleep(1)
-    print(f"Terminating tcpreplay..")
-    tcpreplay_proc.terminate()
-    time.sleep(2)
-    # Wait / Terminate ids_proc
-    print(f"Termating zeekctl..")
-    time.sleep(1)
-    print(f"Wait for zeekctl to finish")
-    ids_proc.wait()
-    command = [
-            "sudo",
-            "docker",
-            "exec",
-            "zeek-container",
-            "bash",
-            "-c",
-            f"cd logs && zeekctl stop"
-    ]
-    # command = ["sudo", zeekctl_path, "stop"]
-    subprocess.Popen(command)
-
-    # End / join thread
-    print("Terminating monitor thread")
-    monitor_thread.join()
-    time.sleep(2)
-    if not check_tcpreplay_throughput("zeekctl",speed): # If not a match then restart 
-        #remove_logs() 
-        run(interface,speed,loop) 
-
-
-    # Wait for values to be updated
-    time.sleep(10)
-    # Two methods of extracting the drop rate, which one is the best?
-    update_and_clean_docker_logs()
-    dict_for_drop_rates = extract_drop_rate_zeekctl() # Return a dictionary with all roles and their respective total packets and dropped packet as a tuple 
-    # Write drop rate to file
-    total_packets_var = 0
-    for role, packets_tuple in dict_for_drop_rates.items():
-        total_packets,dropped_packets = packets_tuple 
-        total_packets_var += total_packets
-        drop_rate = 0 if total_packets <= 0 else (dropped_packets/total_packets)*100
-        with open(f"./zeekctl/perf_files/drop_rate_{role}_{speed}.txt", "w") as f:
-            f.write(str(drop_rate))
-        with open(f"./zeekctl/perf_files/total_packets_{role}_{speed}.txt", "w") as f:
-            f.write(str(total_packets))
-    # According to tcp replay the drop rate is higher than zeekctl has recorded
-    extract_tcpreplay_drop_rate(speed,dict_for_drop_rates)
-    
 def check_if_same_interface(): # TODO: Check that the same interface is used in "run" as defined in workers
     pass
 
@@ -378,10 +427,17 @@ def update_and_clean_docker_logs():
         # The `rm -rf` command to clean the target directory
         command = f"rm -rf {target_path}/*"
 
-        subprocess.run(
-            ["docker", "exec", "zeek-container", "sh", "-c", command],
-            check=True
+        result = subprocess.run(
+            ["sudo","docker", "exec", "zeek-container", "sh", "-c", command],
+            check=True,
+            # text=True,
+            # capture_output=True  # Captures both stdout and stderr
         )
+        
+        # # If the command was successful, print the output
+        # print("Command succeeded!")
+        # print("Output:\n", result.stdout)  # The standard output of the command
+        # print("Error (if any):\n", result.stderr)  # The error output of the command (if any)
 
         print(f"Cleaned contents of '{target_path}' inside container zeek-container'.")
 
@@ -526,20 +582,43 @@ def count_crashed_nodes():
 
 
 def main():
-
+    start = time.time()
     print("Current Working Directory:", os.getcwd())
     parser = argparse.ArgumentParser(description="Run system performance evaluation on Zeekctl")
     parser.add_argument("interface",help="Which interface should the IDSs be run on?")
     args = parser.parse_args()
+    """
+    data_group = parser.add_argument_group("Dataset options")
+    data_group.add_argument("--dataset", choices=["TII-SSRC-23", "UNSW-NB15", "BOT-IOT", "CIC-IDS2017"], 
+                           help="Choose a dataset")
+    data_group.add_argument("--pcap", help="Specify a PCAP file from the dataset")
+
+    generator_group = parser.add_argument_group("Traffic generator options")
+    generator_group.add_argument("--traffic-generator", choices=["ID2T"], help="Choose a traffic generator")
+    generator_group.add_argument("--attack", help="Specify an attack for traffic generation")
+    
+    args = parser.parse_args()
+    """
+    # TODO: Add arguments for "first", "last", "step" and "number of nodes/deployments"
     loop = 10
-    first = 50
-    last = 61
+    first = 100
+    last = 101
     step = 10
     
-    #remove_logs() 
+    
+    update_and_clean_docker_logs()
+    remove_logs() 
     restart_interface(args.interface)
-    interface = args.interface+"_host"
+    interface = args.interface+"_host" # Restart creates new interface with name "interface_host"
+    remove_all()
+    revert_init_controller()
+    init_controller()
+    deploy(interface,2,1,1,1)
+    check_all_worker_interfaces(interface)
+    
+
     for i in range(first,last,step):
+        print("Speed:",i)
         run(interface,i,loop)
         crashed_nodes = count_crashed_nodes()
         latencies = measure_latency()
@@ -548,12 +627,16 @@ def main():
                 f.write(str(crashed_nodes)) 
         with open(f"./zeekctl/perf_files/latencies_{i}.txt", "w") as f: 
                 f.write(str(latencies)) 
-        exit(0)
-        #remove_logs() 
+        remove_logs() 
     
+    # Cleanup
+    remove_all()
+    revert_init_controller()
     
-    #remove_logs()     
+    remove_logs()     
     # visualize()
+    end = time.time()
+    print("Runtime:",end-start)
     
     
 if __name__ == "__main__":
