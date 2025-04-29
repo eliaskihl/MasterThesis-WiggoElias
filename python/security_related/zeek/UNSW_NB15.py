@@ -6,8 +6,8 @@ def process_zeek_logs_UNSWNB15(pcap_file):
     
     pd.set_option('future.no_silent_downcasting', True)
     pcap_to_gt_map = {
-    "../datasets/UNSW-NB15/pcap/22-1-2015/22-1-2015.pcap": "../datasets/UNSW-NB15/ground_truth/22-1-2015.csv",
-    "../datasets/UNSW-NB15/pcap/17-2-2015/17-2-2015.pcap": "../datasets/UNSW-NB15/ground_truth/17-2-2015.csv",
+    "../datasets/UNSW-NB15/pcap/pcaps_22-1-2015/pcaps_22-1-2015.pcap": "../datasets/UNSW-NB15/ground_truth/22-1-2015.csv",
+    "../datasets/UNSW-NB15/pcap/pcaps_17-2-2015/pcaps_17-2-2015.pcap": "../datasets/UNSW-NB15/ground_truth/17-2-2015.csv",
 }
     gt_path = pcap_to_gt_map.get(pcap_file)  
 
@@ -22,11 +22,12 @@ def process_zeek_logs_UNSWNB15(pcap_file):
     "dstip": "dest_ip",
     "dsport": "dest_port",
     "Stime": "start_time",
+    "attack_cat": "attack",
     "Label": "flow_alerted"
     }
 
     df_gt.rename(columns=column_mapping, inplace=True)
-    df_gt = df_gt[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'flow_alerted']]
+    df_gt = df_gt[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'attack', 'flow_alerted']]
 
     df_gt['src_port'] = pd.to_numeric(df_gt['src_port'], errors='coerce').astype("Int64")
     df_gt['dest_port'] = pd.to_numeric(df_gt['dest_port'], errors='coerce').astype("Int64")
@@ -71,7 +72,7 @@ def process_zeek_logs_UNSWNB15(pcap_file):
     df_zeek["start_time"] = df_zeek["start_time"].astype(float).round().astype(int)
 
 
-    df_merged = pd.merge(df_gt, df_zeek, how='left', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto', 'start_time'],suffixes=('_gt', '_zeek'))
+    df_merged = pd.merge(df_gt, df_zeek, how='inner', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto', 'start_time'],suffixes=('_gt', '_zeek'))
     df_merged['flow_alerted_zeek'] = df_merged['flow_alerted_zeek'].fillna(False)
 
     df_gt.to_csv("./tmp/df_gt.csv")

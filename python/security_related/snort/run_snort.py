@@ -16,15 +16,13 @@ import numpy as np
 def run_snort_on_pcap(pcap):
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
-    cmd = [
-        "sudo", 
-        "docker", 
-        "exec", 
-        "snort-container", 
-        "bash", 
-        "-c",  
-        f"cd bin && ./snort -r ../{pcap} -c ../etc/snort/snort.lua -l ../../logs && cd .. && cd .. && cd logs && chmod a+r alert_csv.txt"  
-    ]
+    cmd = ["sudo", 
+    "docker", 
+    "exec", 
+    "snort-container", 
+    "bash", 
+    "-c",  
+    f"cd bin && ./snort -r ../{pcap} -c ../etc/snort/snort.lua -l ../../logs && chmod a+r ../../logs/alert_csv.txt"]
 
     process = subprocess.Popen(cmd,stdout=temp, stderr=err)
     process.wait()
@@ -150,7 +148,7 @@ def main():
         else:
             print(f"No processing logic available for the dataset: {args.dataset}")
     
-    delete_snort_logs()
+    #delete_snort_logs()
 
     if noAlerts: 
         return

@@ -1,15 +1,15 @@
 import pandas as pd
 import os
+import subprocess
 
 def process_snort_logs_UNSWNB15(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
 
     pcap_to_gt_map = {
-    "../datasets/UNSW-NB15/pcap/22-1-2015/22-1-2015.pcap": "../datasets/UNSW-NB15/ground_truth/22-1-2015.csv",
-    "../datasets/UNSW-NB15/pcap/17-2-2015/17-2-2015.pcap": "../datasets/UNSW-NB15/ground_truth/17-2-2015.csv",
+    "../datasets/UNSW-NB15/pcap/pcaps_22-1-2015/pcaps_22-1-2015.pcap": "../datasets/UNSW-NB15/ground_truth/22-1-2015.csv",
+    "../datasets/UNSW-NB15/pcap/pcaps_17-2-2015/pcaps_17-2-2015.pcap": "../datasets/UNSW-NB15/ground_truth/17-2-2015.csv",
 }
     gt_path = pcap_to_gt_map.get(pcap_file)  
-
     if gt_path:
         df_gt = pd.read_csv(gt_path, low_memory=False) 
     else:
@@ -40,8 +40,8 @@ def process_snort_logs_UNSWNB15(pcap_file):
     column_names = ["timestamp", "pkt_num", "proto", "pkt_gen", "pkt_len", "dir", "src_ap", "dst_ap", "rule", "action", "msg", "class", "start_time"]
 
     # Load the Snort alert CSV file
-    df_snort = pd.read_csv(log_file, names=column_names, header=None)
-    
+    df_snort = pd.read_csv(log_file, names=column_names)
+
     # Split 'src_ap' and 'dst_ap' into IP and Port (specific to snort)
     df_snort[['src_ip', 'src_port']] = df_snort['src_ap'].str.split(':', n=1, expand=True)
     df_snort[['dest_ip', 'dest_port']] = df_snort['dst_ap'].str.split(':', n=1, expand=True)
@@ -63,8 +63,42 @@ def process_snort_logs_UNSWNB15(pcap_file):
     # Drop duplicates to get alerts for flows instead of individual packets
     df_snort = df_snort.drop_duplicates(subset=["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"])
     
-    
-    df_merged = pd.merge(df_gt, df_snort, how='left', on=['src_ip','src_port','dest_ip','dest_port','proto', 'start_time'],suffixes=('_gt', '_snort'))
+    # Using zeek here to extract all the flows from the pcap file since snort only logs alerts and not also benign flows
+    temp = open(f"./tmp/temp.log", "w")
+    err = open(f"./tmp/err.log", "w")
+    cmd = [
+        "sudo", 
+        "docker", 
+        "exec", 
+        "zeek-container", 
+        "bash", 
+        "-c",
+        f"cd logs && zeek -C -r ../{pcap_file} ../usr/local/zeek/share/zeek/base/protocols/conn" 
+    ]
+
+    process = subprocess.Popen(cmd,stdout=temp, stderr=err)
+    process.wait()
+    zeek_flows = '../zeek/logs/conn.log'
+
+
+    df_zeek_flows = pd.read_csv(zeek_flows, sep='\t', comment='#', low_memory=False)
+    cols = df_zeek_flows.columns.tolist()
+
+    cols[0] = 'start_time'
+    cols[2] = 'src_ip'
+    cols[3] = 'src_port'
+    cols[4] = 'dest_ip'
+    cols[5] = 'dest_port'
+    cols[6] = 'proto'
+    df_zeek_flows.columns = cols
+
+    df_zeek_flows = df_zeek_flows[["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"]]
+    df_zeek_flows["start_time"] = df_zeek_flows["start_time"].astype(int)
+
+    df_snort = pd.merge(df_zeek_flows, df_snort, how='left', on=['src_ip','src_port','dest_ip','dest_port','proto', 'start_time'],suffixes=('_zeek_flows', '_snort'))
+
+    df_merged = pd.merge(df_gt, df_snort, how='inner', on=['src_ip','src_port','dest_ip','dest_port','proto', 'start_time'],suffixes=('_gt', '_snort'))
+
     df_merged['flow_alerted_snort'] = df_merged['flow_alerted_snort'].fillna(False)
 
     df_gt.to_csv("./tmp/df_gt.csv")
