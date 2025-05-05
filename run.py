@@ -1,10 +1,15 @@
 from python.security_related.suricata.run_suricata import run_suricata_dataset, run_suricata_traffic_generator
 from python.security_related.snort.run_snort import run_snort_dataset, run_snort_traffic_generator
 from python.security_related.zeek.run_zeek import run_zeek_dataset, run_zeek_traffic_generator
+from python.system_related.run_latency import run_latency
+from python.system_related.run_throughput import run_throughput
+from python.system_related.run_par import run_parallel
+from IDS_controller.system_related.run import run_controller
 
 import subprocess
 import argparse
 import os
+import sys
 import pandas as pd
 from pathlib import Path
 import contextlib
@@ -23,12 +28,12 @@ TOOLS = {
     "suricata": {"dir": "python/security_related/suricata", "script": "run_suricata.py"},
     "snort": {"dir": "python/security_related/snort", "script": "run_snort.py"},
     "zeek": {"dir": "python/security_related/zeek", "script": "run_zeek.py"},
-    "syseval": {"dir": "python/system_related", "script": "run_all.py"},
-    "syspar": {"dir": "python/system_related", "script": "run_par.py"},
-    "syslatency": {"dir": "python/system_related", "script": "run_latency.py"},
-    "sysvis": {"dir": "python/system_related", "script": "vis_all.py"},
+    "throughput": {"dir": "python/system_related", "script": "run_throughput.py"},
+    "parallel": {"dir": "python/system_related", "script": "run_par.py"},
+    "latency": {"dir": "python/system_related", "script": "run_latency.py"},
+    "visualize": {"dir": "python/system_related", "script": "vis_all.py"},
     "controller": {"dir": "IDS_controller/system_related", "script": "run.py"},
-    "controllervis": {"dir": "IDS_controller/system_related", "script": "vis.py"},
+    "visualize_controller": {"dir": "IDS_controller/system_related", "script": "vis.py"},
     "table": {"dir": ".", "script": "table_generation.py"},
 }
 
@@ -44,6 +49,7 @@ DATASETS = {
 TRAFFIC_GENERATORS = {
     'ID2T': ['EternalBlueExploit', 'PortscanAttack']
 }
+
 
 def run_datasets(results):
     for tool, tool_info in TOOLS.items():
@@ -123,13 +129,52 @@ def run_traffic_generators(results):
 parser = argparse.ArgumentParser(description="Run specified security tools from the root directory")
 parser.add_argument("--tool", required=True, help="Name of the tool to run (e.g., suricata, snort, zeek)")
 parser.add_argument("--dataset", help="Name of the dataset to run (optional for single runs)")
+parser.add_argument("-i",help="interface")
+parser.add_argument("-b",help="begin")
+parser.add_argument("-e",help="end")
+parser.add_argument("-s",help="step")
+parser.add_argument("-speed",help="Throughput for latency eval")
+parser.add_argument("-loop",help="How many time should tcpreplay replay the traffic, will create a generate a specific load.")
+parser.add_argument("-workers",help="Number of workers")
+parser.add_argument("-manager",help="Number of managers")
+parser.add_argument("-proxy",help="Number of proxies")
+parser.add_argument("-logger",help="Number of loggers")
 parser.add_argument("--pcap", help="Path to the pcap file (optional for single runs)")
 parser.add_argument("--traffic_generator", help="Name of the traffic generator (optional for single runs)")
 parser.add_argument("--attack", help="Attack to simulate (optional for single runs)")
 parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments for the script")
 
 args = parser.parse_args()
-
+tool = args.tool
+if tool in ["latency", "parallel", "throughput", "controller"]:
+    print(args.tool)
+    print(args.i)
+    print(args.speed)
+    print(args.loop)
+    print(args.e)
+    print(args.b)
+    print(args.s)
+    if args.i:
+        try:
+            with change_dir(TOOLS[tool]["dir"]):
+                if tool == "latency":
+                    
+                    run_latency(args.i, args.speed, args.loop)
+                elif tool == "throughput":
+                    
+                    run_throughput(args.i, args.b, args.e, args.s, args.loop)
+                elif tool == "parallel":
+                    
+                    run_parallel(args.i, args.b, args.e, args.s, args.loop)
+                elif tool == "controller":
+                    
+                    run_controller(args.i, args.b, args.e, args.s, args.loop, args.worker, args.manager, args.proxy, args.logger)
+                
+        except Exception as e:
+            print(f"Error while running system evalution: {e}")
+        exit(0)
+    else:
+        raise Exception("Missing interface arguemnt")
 # Handle specific dataset + pcap
 if args.dataset and args.pcap:
     tool = args.tool

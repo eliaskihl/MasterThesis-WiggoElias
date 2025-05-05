@@ -7,7 +7,7 @@ import os
 import glob
 from scapy.all import IP, TCP, Ether, RandShort, wrpcap
 from threading import Thread
-from run_all import (
+from python.system_related.run_throughput import (
     wait_for_suricata,
     wait_for_snort,
     wait_for_zeek,
@@ -20,8 +20,8 @@ from run_all import (
     log_performance,
     restart_interface,
     is_interface_valid,
+    check_tcpreplay_throughput
 )
-import argparse
 
 
 def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
@@ -29,7 +29,7 @@ def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
     folder = "latency"
     latency = pcap.split(".")[0].split("_")[-1].split("us")[0]
     print("LATENCY:",latency)
-    speed = latency
+    
     # Fix filepath
     pcap="/pcap/"+pcap
     
@@ -137,6 +137,10 @@ def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
     print("Terminating monitor thread")
     monitor_thread.join()
 
+    # Check tcpreplay throughput
+    if not check_tcpreplay_throughput(ids_name,speed):
+        run(ids_name,loop,speed,interface,pcap)
+
     # Extract drop rate from ids
     if ids_name == "suricata":
         wait_for_suricata_drop_rates()
@@ -149,9 +153,9 @@ def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
         drop_rate, total_packets = extract_drop_rate_zeek()
     # Write drop rate to file
    
-    with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
+    with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{latency}.txt", "w") as f:
         f.write(str(drop_rate))
-    with open(f"./{folder}/{ids_name}/perf_files/total_packets_{speed}.txt", "w") as f:
+    with open(f"./{folder}/{ids_name}/perf_files/total_packets_{latency}.txt", "w") as f:
         f.write(str(total_packets))
 
 
@@ -189,7 +193,7 @@ def generate_pcap_file_latency_eval(pcap_file_size, throughput_mbps):
     # TODO: Add a tag or folder inside of pcap that specifies the "pcap_file_size"
     for latency_us in latency_us_values:
         # Calculate required TCP window size in bytes
-        window_size_bytes = int((latency_us * throughput_mbps) / 8)
+        window_size_bytes = int((latency_us * throughput_mbps) / 8)*100
         print(f"\nTarget latency: {latency_us} μs -> Window Size: {window_size_bytes} bytes")
 
         packets = []  # List to store all packets
@@ -223,42 +227,37 @@ def generate_pcap_file_latency_eval(pcap_file_size, throughput_mbps):
 
     print("\nAll files have been saved.")
 
-def main():
+def run_latency(interface, speed, loop):
     start = time.time()
     """
     Creating an interface:  sudo ip link add veth_host type veth peer name veth_docker
                             sudo ip link set veth_host up
                             sudo ip link set veth_docker up
-    """
-    print("Current Working Directory:", os.getcwd())
+    """ 
     
-    parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
-    parser.add_argument("interface",help="Which interface should the IDSs be run on?")
-    args = parser.parse_args()
- 
-    
-    restart_interface(args.interface) # This will create an interface link between interface_name_host and interface_name_docker
-    interface = (args.interface+"_host")
-    if not is_interface_valid(interface): # Check if interface is valid and exists
-        raise Exception(f"Error: interface: {interface} does not exist.")
+    restart_interface(interface) # This will create an interface link between interface_name_host and interface_name_docker
+    host_interface = (interface+"_host")
+    if not is_interface_valid(host_interface): # Check if interface is valid and exists
+        raise Exception(f"Error: interface: {host_interface} does not exist.")
 
-    loop = 10 # Needs to be increased to a suitable load
-    speed = 64 # Must be this value because of formula in Waleed et al
+    
     # Based on speed create accurate pcap files
-    # Should be adjustable based on the host computers hardware
-    generate_pcap_file_latency_eval(14261,speed) # Generate the files with certain pcap size and speed
-
-    for ids_name in ["snort","zeek","suricata"]:
-        latency_eval(ids_name,loop,speed,interface)
-        
+    # TODO: Should be adjustable based on the host computers hardware
+    # TODO: Generate pcap files only if necessary (they do not exists)
+    # generate_pcap_file_latency_eval(142610,speed) # Generate the files with certain pcap size and speed
+    print("----Running latency---")
+    print("Loop :", loop)
+    print("Speed :", speed)
+    for ids_name in ["zeek"]:
+        latency_eval(ids_name,loop,speed,host_interface)
+        restart_interface(interface)
     
     # visualize()
     runtime = time.time()-start
     print("Runtime:",runtime)
     
     
-if __name__ == "__main__":
-    main()
+
 
 
 

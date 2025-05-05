@@ -4,8 +4,34 @@ from threading import Thread
 import os
 import re 
 import argparse
-from run_all import log_performance,extract_drop_rate_suricata,extract_drop_rate_snort,extract_drop_rate_zeek, restart_interface
+from python.system_related.run_throughput import (
+    log_performance, 
+    extract_drop_rate_suricata, 
+    extract_drop_rate_snort, 
+    extract_drop_rate_zeek, 
+    restart_interface
+    )
 
+def check_tcpreplay_throughput(interface, target_speed): #TODO:
+    
+    threshold_percentage = 5  
+    lower_bound = target_speed * (1 - threshold_percentage / 100)
+    upper_bound = target_speed * (1 + threshold_percentage / 100)
+    log = f"./dir_{interface}/tmp/temp_tcpreplay.log"
+    with open(log, "r") as file:
+        for line in file:
+            #Rated: 4999998.1 Bps, 39.99 Mbps, 7736.63 pps
+            match = re.search(r"Rated:\s*([\d\.]+)\s*Bps,\s*([\d\.]+)\s*Mbps,\s*([\d\.]+)\s*pps", line)
+            if match:
+                tcpreplay_speed = float(match.group(2))  
+                break
+    if lower_bound <= tcpreplay_speed <= upper_bound:
+        print("OK throughput")
+        return True # Throughput is okay
+        
+    else:
+        print("Not OK throughput")
+        return False
 def wait_for_all():
     while True:
         # Open and read each log file
@@ -23,9 +49,36 @@ def wait_for_all():
         
         time.sleep(2)  # Sleep before checking again
 
+def tcpreplay_execution(name,loop,speed,interface,proc):
+    if not os.path.exists(f"./dir_{interface}/tmp/"):
+            print("Directory not found, creating directory...")
+            os.makedirs(f"./dir_{interface}/tmp/")
+    with open(f"./dir_{interface}/tmp/temp_tcpreplay.log", "w") as temp, \
+        open(f"./dir_{interface}/tmp/err_tcpreplay.log", "w") as err:
+        try:
+            cmd = [
+                "docker", "exec", 
+                f"{name}-container",
+                "tcpreplay",
+                "-i", interface,
+                f"--loop={loop}",
+                f"--mbps={speed}",
+                "/pcap/smallFlows.pcap"
+            ]
+            proc[interface] = subprocess.Popen(cmd,stdout=temp, stderr=err)
+            
+        except Exception as e:
+            print(f"Error starting tcpreplay on {interface}: {e}")
+            proc[interface] = None
+    
+def run(loop, speed, interfaces, recursion_count=0, max_recursions=5):
+    
+    if recursion_count >= max_recursions: # Stop recursion after 5 calls
+        print(f"Maximum recursion limit reached ({max_recursions}), failed to reach throughput: {speed}.")
+        return  
 
-def run(loop, speed, interfaces):
 
+    print("LOOP:",loop, " | SPEED:",speed)
     ids_name = ["suricata","snort","zeek"]
     filepaths = {}
     for name in ids_name:
@@ -88,32 +141,18 @@ def run(loop, speed, interfaces):
     time.sleep(1)
     
     tcpreplay_proc = {}
+    tcpreplay_threads = {}
     for name, interface in zip(ids_name, interfaces):
-        if not os.path.exists(f"./dir_{interface}/tmp/"):
-            print("Directory not found, creating directory...")
-            os.makedirs(f"./dir_{interface}/tmp/")
-        with open(f"./dir_{interface}/tmp/temp_tcpreplay.log", "w") as temp, \
-        open(f"./dir_{interface}/tmp/err_tcpreplay.log", "w") as err:
-            try:
-                cmd = [
-                    "docker", "exec", 
-                    f"{name}-container",
-                    "tcpreplay",
-                    "-i", interface,
-                    f"--loop={loop}",
-                    f"--mbps={speed}",
-                    "/pcap/smallFlows.pcap"
-                ]
-                # cmd = ["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/smallFlows.pcap"]
-                tcpreplay_proc[interface] = subprocess.Popen(cmd,stdout=temp, stderr=err)
-                time.sleep(1) # Give process time to start
-            except Exception as e:
-                print(f"Error starting tcpreplay on {interface}: {e}")
-                tcpreplay_proc[interface] = None
+        tcpreplay_thread = Thread(target=tcpreplay_execution, args=(name,loop,speed,interface,tcpreplay_proc))
+        tcpreplay_threads[interface] = tcpreplay_thread
+        tcpreplay_thread.start()        
+            
+    for interface, thread in tcpreplay_threads.items():
+        thread.join()
 
     # Log performance in seperate thread for all IDSs
     monitor_threads = {}
-    for name, interface in zip(ids_name, interfaces):
+    for name, interface in zip(ids_name, interfaces): #TODO: Wait for tcpreplay to start
         monitor_threads[name] = Thread(target=log_performance, args=(filepaths[name], f"{name}", tcpreplay_proc[interface]))
         monitor_threads[name].start()
     
@@ -125,8 +164,9 @@ def run(loop, speed, interfaces):
     for interface in interfaces:
         if tcpreplay_proc[interface].poll() is None:  # Check if still running
             print(f"Terminating tcpreplay on {interface}...", flush=True)
-            tcpreplay_proc[interface].terminate()
+            tcpreplay_proc[interface].terminate() 
     time.sleep(2)
+
     
     # Wait / Terminate ids_proc
     for name in ids_name:      
@@ -147,6 +187,13 @@ def run(loop, speed, interfaces):
     for name in ids_name:
         monitor_threads[name].join()
 
+    # Check throughput is correct
+    for interface in interfaces: 
+        restart_interface(interface)
+        if not check_tcpreplay_throughput(interface,speed):
+            time.sleep(5)
+            run(loop, speed, interfaces, recursion_count + 1, max_recursions) # Stop after 5 recursions
+            
     drop_rate = {}
     total_packets = {}
     wait_for_all_drop_rates()
@@ -162,7 +209,7 @@ def run(loop, speed, interfaces):
             f.write(str(drop_rate[name]))
         with open(f"./parallel/{name}/perf_files/total_packets_{speed}.txt", "w") as f:
             f.write(str(total_packets[name]))
-
+    
 def wait_for_all_drop_rates():
     # Create a function that will wait until err or temp files contain "total packets"
     # while open(f"./suricata/tmp/temp.log", 'r').read().find("packets:") < 0 and open(f"./zeek/tmp/err.log", 'r').read().find(f"packets received on interface") < 0 and open(f"./snort/tmp/temp.log", 'r').read().find(f"received:") < 0:
@@ -193,10 +240,16 @@ def wait_for_all_drop_rates():
         time.sleep(2)
 
 def create_interface(interfaces):
+    host_ip = "192.168.100.1/24"
+    docker_ip = "192.168.100.2/24"
+    host_interface = interface+"_host"
+    docker_interface = interface+"_docker"
     for interface in interfaces:
         # Dummy is not enough need to be tunneled interface
         try:
             subprocess.run(["sudo", "ip", "link", "add", interface +"_host", "type", "veth", "peer", "name", interface+"_docker"], check=True)  
+            subprocess.run(["sudo", "ip", "addr", "add", host_ip, "dev", host_interface], check=True) # This is to introduce IPREF3
+            subprocess.run(["sudo", "ip", "addr", "add", docker_ip, "dev", docker_interface], check=True)
             # Bring them up
             subprocess.run(["sudo", "ip", "link", "set", interface+"_host", "up"], check=True)
             subprocess.run(["sudo", "ip", "link", "set", interface+"_docker", "up"], check=True)
@@ -209,7 +262,7 @@ def remove_interface(interfaces):
                 subprocess.run(["sudo", "ip", "link", "delete", interface, "type", "dummy"],check=True)
             except subprocess.CalledProcessError as e:
                 print(f"Failed to create interfaces {e}")
-def main():
+def run_parallel(interface, first=10, last=60, step=10, loop=10):
     """
     Arguments for main():
     First - first mbits/s speed index
@@ -218,17 +271,13 @@ def main():
     Loop - number of times to loop the pcap file
     """
     start = time.time()
-    parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
-    parser.add_argument("interface",help="Which interface should the IDSs be run on?")
-    args = parser.parse_args()
-    loop = 10
-    first = 10
-    last = 71
-    step = 10
+    first = int(first)
+    last = int(last)
+    step = int(step)
+    loop = int(loop)
 
-
-    interfaces = [args.interface+"1", args.interface+"2"]
-    interfaces.insert(0, args.interface)
+    interfaces = [interface+"1", interface+"2"]
+    interfaces.insert(0, interface)
     host_interfaces = []
     # Start interfaces
     for interface in interfaces:
@@ -237,8 +286,7 @@ def main():
     
     for i in range(first,last,step):
         print("Speed:",i)
-        print("Interfaces", host_interfaces)
-        run(loop, i, host_interfaces)
+        loop = run(loop, i, host_interfaces)
         # Restart interfaces
         for interface in interfaces:
             restart_interface(interface)
@@ -247,8 +295,5 @@ def main():
     # remove_interface(interfaces) #TODO: Change from dummy to peer
     end = time.time()
     print("Runtime:",end-start)
-    
-if __name__ == "__main__":
-    main()
 
 

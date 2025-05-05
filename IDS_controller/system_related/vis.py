@@ -34,12 +34,30 @@ def latency_plot(throughput):
     
     with open(f"./zeekctl/perf_files/latencies_{str(throughput)}.txt", "rb") as file:
         latencies = eval(file.read())
-
+    # Extract to dataframe
+    # Flatten to single-row DataFrame
+    df = pd.DataFrame()
+    file = "./df_latency_between_nodes.csv"
+    if os.path.exists(file):
+            with open(file, "r") as f:
+                df_tot = pd.read_csv(f)
+    else:
+        df_tot = pd.DataFrame()
+    # Temporary dataframe
+    df = pd.DataFrame()
     G = nx.MultiDiGraph()  # Supports directional and multiple edges
 
     # Build graph
     for (src, dst), latency in latencies.items():
         G.add_edge(src, dst, weight=latency)
+        df[f"Latency_between_{src}_{dst}"] = [latency]
+        print(src,dst,latency)
+    print(df)
+    # Append to total df
+    pd.concat([df_tot,df])
+    # Save df
+    df_tot.to_csv(file)
+
 
     # Layout
     pos = nx.spring_layout(G, k=2, iterations=25, seed=42)
@@ -188,6 +206,7 @@ def visualize():
         # for speed value get latency and shutdown plots
         crashed_plot(speed)
         latency_plot(speed)
+        
 
         for i in range(len(list_of_roles)):
             speeds.append(speed)
@@ -213,7 +232,7 @@ def visualize():
     speeds = []     
   
     print("Final:\n",final_df)
-
+    exit(0)
     
     if not os.path.exists(f"../../img/controller/"):
         os.makedirs(f"../../img/controller")

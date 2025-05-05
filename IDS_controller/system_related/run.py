@@ -12,7 +12,7 @@ import gzip
 from threading import Thread
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-from python.system_related.run_all import check_tcpreplay_throughput, restart_interface
+from python.system_related.run_throughput import check_tcpreplay_throughput, restart_interface
 
 
 def revert_init_controller():
@@ -581,12 +581,9 @@ def count_crashed_nodes():
 
 
 
-def main():
+def run_controller(interface, first=10, last=60, step=10, loop=10, workers=1,manager=1,proxy=1,logger=1):
     start = time.time()
-    print("Current Working Directory:", os.getcwd())
-    parser = argparse.ArgumentParser(description="Run system performance evaluation on Zeekctl")
-    parser.add_argument("interface",help="Which interface should the IDSs be run on?")
-    args = parser.parse_args()
+    
     """
     data_group = parser.add_argument_group("Dataset options")
     data_group.add_argument("--dataset", choices=["TII-SSRC-23", "UNSW-NB15", "BOT-IOT", "CIC-IDS2017"], 
@@ -600,26 +597,30 @@ def main():
     args = parser.parse_args()
     """
     # TODO: Add arguments for "first", "last", "step" and "number of nodes/deployments"
-    loop = 10
-    first = 100
-    last = 101
-    step = 10
+    first = int(first)
+    last = int(last)
+    step = int(step)
+    loop = int(loop)
+    worker = int(worker)
+    manager = int(manager)
+    proxy = int(proxy)
+    logger = int(logger)
     
     
     update_and_clean_docker_logs()
     remove_logs() 
-    restart_interface(args.interface)
-    interface = args.interface+"_host" # Restart creates new interface with name "interface_host"
+    restart_interface(interface)
+    host_interface = interface+"_host" # Restart creates new interface with name "interface_host"
     remove_all()
     revert_init_controller()
     init_controller()
-    deploy(interface,2,1,1,1)
-    check_all_worker_interfaces(interface)
+    deploy(host_interface,worker,proxy,manager,logger)
+    check_all_worker_interfaces(host_interface)
     
 
     for i in range(first,last,step):
         print("Speed:",i)
-        run(interface,i,loop)
+        run(host_interface,i,loop)
         crashed_nodes = count_crashed_nodes()
         latencies = measure_latency()
 
@@ -639,8 +640,7 @@ def main():
     print("Runtime:",end-start)
     
     
-if __name__ == "__main__":
-    main()
+
 
 
 
