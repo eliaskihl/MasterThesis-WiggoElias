@@ -57,7 +57,9 @@ def tcpreplay_execution(name,loop,speed,interface,proc):
         open(f"./dir_{interface}/tmp/err_tcpreplay.log", "w") as err:
         try:
             cmd = [
-                "docker", "exec", 
+                "sudo",
+                "docker", 
+                "exec", 
                 f"{name}-container",
                 "tcpreplay",
                 "-i", interface,
