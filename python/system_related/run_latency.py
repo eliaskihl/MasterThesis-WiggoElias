@@ -36,12 +36,12 @@ def run(ids_name, loop, speed, interface, pcap):
         
         if not os.path.exists(f"./{folder}/{str(ids_name)}/perf_files"):
             print("Directory not found, creating directory...")
-            os.makedirs(f"./{folder}/{str(ids_name)}/perf_files")
+            os.makedirs(f"./{folder}/{str(ids_name)}/perf_files", exist_ok=True)
         filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{latency}.csv"
         # Start IDS as a subprocess
         print(f"Starting {ids_name}...")
         if not os.path.exists(f"./{ids_name}/tmp/"):
-            os.makedirs(f"./{ids_name}/tmp/")
+            os.makedirs(f"./{ids_name}/tmp/", exist_ok=True)
         temp = open(f"./{ids_name}/tmp/temp.log", "w")
         err = open(f"./{ids_name}/tmp/err.log", "w")
         ## DEPENDING ON IDS USE DIFFERENT COMMANDS
@@ -164,7 +164,7 @@ def run(ids_name, loop, speed, interface, pcap):
             tries += 1
             original_interface = interface.split("_")[0]
             restart_interface(original_interface)
-            run(ids_name, loop, speed, original_interface)
+            run(ids_name, loop, speed, original_interface, pcap)
 
 
 

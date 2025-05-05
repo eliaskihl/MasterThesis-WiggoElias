@@ -25,9 +25,9 @@ def change_dir(target_dir):
     finally:
         os.chdir(prev_dir)
 
-if not os.path.exists(f"./tables/", exist_ok=True):
+if not os.path.exists(f"./tables/"):
             print("Directory not found, creating directory...")
-            os.makedirs(f"./tables/")
+            os.makedirs(f"./tables/", exist_ok=True)
 # Mapping of tool names to their respective directories and scripts
 TOOLS = {
     "suricata": {"dir": "python/security_related/suricata", "script": "run_suricata.py"},
