@@ -8,7 +8,6 @@ import glob
 from threading import Thread
 
 def check_zeek_interface(interface):
-    new_lines = []
     filepath ="./../python/ids_configuration/zeek/config/zeek/node.cfg"
     # interface=veth_host
     with open(filepath,"r") as file:
@@ -137,31 +136,23 @@ def log_performance(log_file, process_name,tcp_proc):
             #psutil.process_iter.cache_clear()
     print("Logging complete", flush=True)
 
-def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
+def run(ids_name, loop, speed, interface):
     
-    if pcap == "smallFlows.pcap":
-        folder = "regular"
-    else:
-        folder = "latency"
-        latency = pcap.split(".")[0].split("_")[-1].split("us")[0]
-        print("LATENCY:",latency)
+    folder = "regular"
+    pcap="/pcap/smallFlows.pcap"
+    
 
-    # Fix filepath
-    pcap="/pcap/"+pcap
-    
-    if folder == "regular":
-        if not os.path.exists(f"./{folder}/{str(ids_name)}/perf_files"):
-            print("Directory not found, creating directory...")
-            os.makedirs(f"./{folder}/{str(ids_name)}/perf_files")
-        filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
-    elif folder == "latency":
-        if not os.path.exists(f"./{folder}/{str(ids_name)}/perf_files"):
-            print("Directory not found, creating directory...")
-            os.makedirs(f"./{folder}/{str(ids_name)}/perf_files")
-        filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{latency}.csv"
+    if not os.path.exists(f"./{folder}/{str(ids_name)}/perf_files"):
+        print("Directory not found, creating directory...")
+        os.makedirs(f"./{folder}/{str(ids_name)}/perf_files")
+    filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
     # Start IDS as a subprocess
     print(f"Starting {ids_name}...", flush=True)
-    
+    if not os.path.exists(f"./{ids_name}/tmp/temp.log"):
+        os.makedirs(f"./{ids_name}/tmp/temp.log")
+    if not os.path.exists(f"./{ids_name}/tmp/err.log"):
+        os.makedirs(f"./{ids_name}/tmp/err.log")
+           
     temp = open(f"./{ids_name}/tmp/temp.log", "w")
     err = open(f"./{ids_name}/tmp/err.log", "w")
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
@@ -213,6 +204,12 @@ def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
     # Start tcp replay
     print("Starting tcp replay...", flush=True)
     time.sleep(1)
+    if not os.path.exists(f"./{ids_name}/tmp/temp_tcpreplay.log"):
+        os.makedirs(f"./{ids_name}/tmp/temp_tcpreplay.log")
+
+    if not os.path.exists(f"./{ids_name}/tmp/err_tcpreplay.log"):
+        os.makedirs(f"./{ids_name}/tmp/err_tcpreplay.log")
+        
     temp = open(f"./{ids_name}/tmp/temp_tcpreplay.log", "w")
     err = open(f"./{ids_name}/tmp/err_tcpreplay.log", "w")
     cmd = [
@@ -244,13 +241,13 @@ def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
 
     if ids_name == "snort":
         subprocess.run([
-            "docker", "exec", f"{ids_name}-container",
+            "sudo","docker", "exec", f"{ids_name}-container",
             "bash", "-c", f"kill -SIGINT $(pgrep -fx './snort -i veth_host -c ../etc/snort/snort.lua')"
         ])
     else:
         # subprocess.run(["docker", "exec", f"{ids_name}-container", "pkill", "-SIGINT", f"{ids_name}"])
         subprocess.run([
-            "docker", "exec", f"{ids_name}-container",
+            "sudo", "docker", "exec", f"{ids_name}-container",
             "bash", "-c", f"kill -SIGINT $(pgrep -f {ids_name})"
         ])
     time.sleep(1)
@@ -275,16 +272,11 @@ def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
         wait_for_zeek_drop_rates()
         drop_rate, total_packets = extract_drop_rate_zeek()
     # Write drop rate to file
-    if folder == "regular":
-        with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
-            f.write(str(drop_rate))
-        with open(f"./{folder}/{ids_name}/perf_files/total_packets_{speed}.txt", "w") as f:
-            f.write(str(total_packets))
-    elif folder == "latency":
-        with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{latency}.txt", "w") as f:
-            f.write(str(drop_rate))
-        with open(f"./{folder}/{ids_name}/perf_files/total_packets_{latency}.txt", "w") as f:
-            f.write(str(total_packets))
+    
+    with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
+        f.write(str(drop_rate))
+    with open(f"./{folder}/{ids_name}/perf_files/total_packets_{speed}.txt", "w") as f:
+        f.write(str(total_packets))
     
 def extract_drop_rate_zeek():
     log = "./zeek/tmp/err.log"
