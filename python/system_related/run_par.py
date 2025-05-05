@@ -92,7 +92,10 @@ def run(loop, speed, interfaces, recursion_count=0, max_recursions=5):
     print("Stating IDSs")
     temp = {}
     err = {}
+   
     for name in ids_name:
+        if not os.path.exists(f"./{name}/tmp/"):
+            os.makedirs(f"./{name}/tmp/")
         temp[name] = open(f"./{name}/tmp/temp.log", "w")
         err[name] = open(f"./{name}/tmp/err.log", "w")
     ## DEPENDING ON IDS USE DIFFERENT COMMANDS
@@ -265,7 +268,7 @@ def remove_interface(interfaces):
             except subprocess.CalledProcessError as e:
                 print(f"Failed to create interfaces {e}")
 
-                
+
 def run_parallel(interface, first=10, last=60, step=10, loop=10):
     """
     Arguments for main():
