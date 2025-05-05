@@ -583,7 +583,7 @@ def count_crashed_nodes():
 
 
 
-def run_controller(interface, first=10, last=60, step=10, loop=10, workers=1,manager=1,proxy=1,logger=1):
+def run_controller(interface, first=10, last=60, step=10, loop=10, worker=1,manager=1,proxy=1,logger=1):
     start = time.time()
     
     

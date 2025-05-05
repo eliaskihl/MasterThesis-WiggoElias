@@ -25,6 +25,9 @@ def change_dir(target_dir):
     finally:
         os.chdir(prev_dir)
 
+if not os.path.exists(f"./tables/", exist_ok=True):
+            print("Directory not found, creating directory...")
+            os.makedirs(f"./tables/")
 # Mapping of tool names to their respective directories and scripts
 TOOLS = {
     "suricata": {"dir": "python/security_related/suricata", "script": "run_suricata.py"},
@@ -150,13 +153,7 @@ parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments
 args = parser.parse_args()
 tool = args.tool
 if tool in ["latency", "parallel", "throughput", "controller"]:
-    print(args.tool)
-    print(args.i)
-    print(args.speed)
-    print(args.loop)
-    print(args.e)
-    print(args.b)
-    print(args.s)
+    
     if args.i:
         try:
             with change_dir(TOOLS[tool]["dir"]):
@@ -220,7 +217,7 @@ if args.dataset and args.pcap:
         df = pd.DataFrame(results)
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-        df.to_csv('run_results.csv', index=False)
+        df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
         print("Results saved to run_results.csv")
     except Exception as e:
         print(f"Error while running single dataset: {e}")
@@ -259,7 +256,7 @@ if args.traffic_generator and args.attack:
         df = pd.DataFrame(results)
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-        df.to_csv('run_results.csv', index=False)
+        df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
         print("Results saved to run_results.csv")
     except Exception as e:
         print(f"Error while running single attack: {e}")
@@ -273,7 +270,7 @@ if args.tool == "datasets":
     if 'tool' in df.columns:
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-    df.to_csv('run_results.csv', index=False)
+    df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
     print("Results saved to run_results.csv")
     exit(0)
 
@@ -285,7 +282,7 @@ if args.tool == "traffic_generators":
     if 'tool' in df.columns:
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-    df.to_csv('run_results.csv', index=False)
+    df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
     print("Results saved to run_results.csv")
     exit(0)
 
@@ -298,7 +295,7 @@ if args.tool == "datasets_traffic_generators":
     if 'tool' in df.columns:
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-    df.to_csv('run_results.csv', index=False)
+    df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
     print("Results saved to run_results.csv")
     exit(0)
 

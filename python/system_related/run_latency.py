@@ -169,7 +169,9 @@ def run(ids_name, loop, speed, interface, pcap):
 
 
 def latency_eval(ids_name,loop,speed, interface):
-    file_paths = glob.glob("./pcap/latency*")
+    file_paths = glob.glob(f"./pcap/{speed}/latency*")
+    if not file_paths:
+        generate_pcap_file_latency_eval(1000,speed) 
     print(file_paths)
     for path in file_paths:
         filename = os.path.basename(path)
@@ -179,7 +181,7 @@ def latency_eval(ids_name,loop,speed, interface):
         restart_interface(interface.split("_")[0]) # Restart "interface", todo this remove "host" part
 
 
-def generate_pcap_file_latency_eval(pcap_file_size, throughput_mbps):
+def generate_pcap_file_latency_eval(pcap_file_size=1000, throughput_mbps=8):
     # Latency = TCP Window Size / Throughput
     dst_ip = "192.182.17.2"
     dst_port = 80
@@ -194,13 +196,13 @@ def generate_pcap_file_latency_eval(pcap_file_size, throughput_mbps):
     print(f"Using throughput: {throughput_mbps} Mbps")
 
     # Create pcap directory if it doesn't exist
-    os.makedirs("./pcap", exist_ok=True)
+    os.makedirs(f"./pcap/{throughput_mbps}/", exist_ok=True)
     # Check if file of certain pcap len already exists, no need to recreate them
-    # TODO: Add a tag or folder inside of pcap that specifies the "pcap_file_size"
+    
     for latency_us in latency_us_values:
         # Calculate required TCP window size in bytes
         window_size_bytes = int((latency_us * throughput_mbps) / 8)*100
-        print(f"\nTarget latency: {latency_us} μs -> Window Size: {window_size_bytes} bytes")
+        print(f"Target latency: {latency_us} μs -> Window Size: {window_size_bytes} bytes")
 
         packets = []  # List to store all packets
 
@@ -219,13 +221,10 @@ def generate_pcap_file_latency_eval(pcap_file_size, throughput_mbps):
 
         # Wrap all packets in Ethernet frames
         ether_packets = [Ether(dst=dst_mac) / p for p in packets]
-        
-        # Check number of packets after wrapping
-        print(f"Total Ethernet-wrapped packets: {len(ether_packets)}")
 
         # Define filename for pcap file
         filename = f"latency_{latency_us}us.pcap"
-        filename = os.path.join("./pcap/", filename)         
+        filename = os.path.join(f"./pcap/{throughput_mbps}/", filename)         
         
         # Save the packets to the pcap file
         wrpcap(filename, ether_packets)
@@ -250,9 +249,8 @@ def run_latency(interface, speed, loop):
     loop = int(loop)
     # Based on speed create accurate pcap files
     # TODO: Should be adjustable based on the host computers hardware
-    # TODO: Generate pcap files only if necessary (they do not exists)
     # generate_pcap_file_latency_eval(142610,speed) # Generate the files with certain pcap size and speed
-    print("----Running latency---")
+   
     print("Loop :", loop)
     print("Speed :", speed)
     for ids_name in ["zeek","snort","suricata"]:
