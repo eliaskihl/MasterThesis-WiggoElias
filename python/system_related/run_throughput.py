@@ -216,7 +216,7 @@ def run(ids_name, loop, speed, interface, pcap="smallFlows.pcap"):
     temp = open(f"./{ids_name}/tmp/temp_tcpreplay.log", "w")
     err = open(f"./{ids_name}/tmp/err_tcpreplay.log", "w")
     cmd = [
-        "docker", "exec", 
+        "sudo","docker", "exec", 
         f"{ids_name}-container",
         "tcpreplay",
         "-i", interface,

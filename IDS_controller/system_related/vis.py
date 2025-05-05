@@ -301,12 +301,7 @@ def visualize():
     
 
 
-def main():
-    print("Current Working Directory:", os.getcwd())
-    parser = argparse.ArgumentParser(description="Run system performance visualization on Zeekctl")
-    
+def visualize_controller():
     visualize()
 
-if __name__ == "__main__":
-    main()
 

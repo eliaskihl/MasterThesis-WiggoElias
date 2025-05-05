@@ -163,17 +163,13 @@ def visualize(folder):
     plt.savefig(f"../../img/{folder}/total_packets_sent.png")
     plt.clf()  # Clear the figure
 
-def main():
+def visualize(folder):
+    # Folder is the type, throughput or latency
     start = time.time()
-    print("Current Working Directory:", os.getcwd())
-    # generate_pcap_file_latency_eval(140000) # Similar amount to {folder} measurments, could be calculated by checking loop size and smallFlows.pcap length.
-    parser = argparse.ArgumentParser(description="Run system performance evaluation on all IDSs with set packet size.")
-    parser.add_argument("folder", help="Folder name, must be regular, parallel or latency")
-    args = parser.parse_args()
-    visualize(args.folder)
+
+    visualize(folder)
     end = time.time()
     print("Runtime:",end-start)
 
-if __name__ == "__main__":
-    main()
+
 

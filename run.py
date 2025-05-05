@@ -4,7 +4,9 @@ from python.security_related.zeek.run_zeek import run_zeek_dataset, run_zeek_tra
 from python.system_related.run_latency import run_latency
 from python.system_related.run_throughput import run_throughput
 from python.system_related.run_par import run_parallel
+from python.system_related.vis_all import visualize
 from IDS_controller.system_related.run import run_controller
+from IDS_controller.system_related.vis import visualize_controller
 
 import subprocess
 import argparse
@@ -142,6 +144,7 @@ parser.add_argument("-logger",help="Number of loggers")
 parser.add_argument("--pcap", help="Path to the pcap file (optional for single runs)")
 parser.add_argument("--traffic_generator", help="Name of the traffic generator (optional for single runs)")
 parser.add_argument("--attack", help="Attack to simulate (optional for single runs)")
+parser.add_argument("--type",help="Choose to viszualize the latency or throughput files, (can be latency or throughput)")
 parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments for the script")
 
 args = parser.parse_args()
@@ -167,7 +170,7 @@ if tool in ["latency", "parallel", "throughput", "controller"]:
                     
                     run_parallel(args.i, args.b, args.e, args.s, args.loop)
                 elif tool == "controller":
-                    
+
                     run_controller(args.i, args.b, args.e, args.s, args.loop, args.worker, args.manager, args.proxy, args.logger)
                 
         except Exception as e:
@@ -175,6 +178,15 @@ if tool in ["latency", "parallel", "throughput", "controller"]:
         exit(0)
     else:
         raise Exception("Missing interface arguemnt")
+if tool in ["visualize", "visualize_controller"]:
+    try:
+        with change_dir(TOOLS[tool]["dir"]):
+            if tool == "visualize":
+                visualize(args.type)
+            elif tool == "visualize_controller":
+                visualize_controller()
+    except Exception as e:
+            print(f"Error while running system evalution visuialization: {e}")
 # Handle specific dataset + pcap
 if args.dataset and args.pcap:
     tool = args.tool
