@@ -7,6 +7,19 @@ import os
 import glob
 from threading import Thread
 
+def terminate_ids(ids_name):
+    if ids_name == "suricata":
+        subprocess.run([
+            "sudo","docker", "exec", f"{ids_name}-container",
+            "bash", "-c", "kill -SIGINT $(pgrep -f suricata)"
+        ])
+    else:
+        # subprocess.run(["docker", "exec", f"{ids_name}-container", "pkill", "-SIGINT", f"{ids_name}"])
+        subprocess.run([
+            "sudo","docker", "exec", f"{ids_name}-container",
+            "bash", "-c", f"kill -SIGINT $(pgrep -f {ids_name})"
+        ])
+
 def check_zeek_interface(interface):
     filepath ="./../python/ids_configuration/zeek/config/zeek/node.cfg"
     # interface=veth_host
@@ -18,8 +31,7 @@ def check_zeek_interface(interface):
         for line in file:
             if line == f"interface={interface}":
                 file.writelines(f"interface={interface}")        
-   
-        
+         
 
 def check_tcpreplay_throughput(ids_name,target_speed):
     threshold_percentage = 5  
@@ -137,146 +149,153 @@ def log_performance(log_file, process_name,tcp_proc):
     print("Logging complete", flush=True)
 
 def run(ids_name, loop, speed, interface):
-    
-    folder = "regular"
-    pcap="/pcap/smallFlows.pcap"
-    
-
-    if not os.path.exists(f"./{folder}/{str(ids_name)}/perf_files"):
-        print("Directory not found, creating directory...")
-        os.makedirs(f"./{folder}/{str(ids_name)}/perf_files")
-    filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
-    # Start IDS as a subprocess
-    print(f"Starting {ids_name}...", flush=True)
-    if not os.path.exists(f"./{ids_name}/tmp/temp.log"):
-        os.makedirs(f"./{ids_name}/tmp/temp.log")
-    if not os.path.exists(f"./{ids_name}/tmp/err.log"):
-        os.makedirs(f"./{ids_name}/tmp/err.log")
-           
-    temp = open(f"./{ids_name}/tmp/temp.log", "w")
-    err = open(f"./{ids_name}/tmp/err.log", "w")
-    ## DEPENDING ON IDS USE DIFFERENT COMMANDS
-
-    if ids_name == "suricata":
-        cmd = [
-            "sudo", 
-            "docker", 
-            "exec", 
-            "suricata-container", 
-            "bash", 
-            "-c",  
-            f"cd .. && cd .. && cd usr/local/bin && ./suricata -i {interface} -c ../etc/suricata/suricata.yaml"  
-        ]
-        # command = ["sudo", suricata_path, "-i", interface, "-l", "./suricata/logs"]
-        ids_proc = subprocess.Popen(cmd, stdout=temp, stderr=err) 
-        wait_for_suricata()
-    elif ids_name == "snort":
-        cmd = [
-            "sudo", 
-            "docker", 
-            "exec", 
-            "snort-container", 
-            "bash", 
-            "-c",  
-            f"cd bin && ./snort  -i {interface} -c ../etc/snort/snort.lua"  
-        ]
-        # command = ["sudo", snort_path, "-c", "../config/snort/snort.lua", "-i", interface]
-        ids_proc = subprocess.Popen(cmd, stdout=temp, stderr=err)
-        wait_for_snort()
-    elif ids_name == "zeek": 
-        cmd = [
-            "sudo", 
-            "docker", 
-            "exec", 
-            "zeek-container", 
-            "bash", 
-            "-c",
-            f"cd logs && zeek -C -i {interface} /usr/local/zeek/share/zeek/test-all-policy.zeek" 
-        ]
-        # command = ["sudo", zeek_path, "-i", interface]
-        ids_proc = subprocess.Popen(cmd, stdout=temp, stderr=err)
-        wait_for_zeek()
-    
-    if ids_name == "snort":
-        time.sleep(10)      # TODO: change from sleep to something else - Give the process 10 seconds to intitate.
-                            # TODO: Maybe this should be scaled with the throughput for all IDSs.
-
-    # Start tcp replay
-    print("Starting tcp replay...", flush=True)
-    time.sleep(1)
-    if not os.path.exists(f"./{ids_name}/tmp/temp_tcpreplay.log"):
-        os.makedirs(f"./{ids_name}/tmp/temp_tcpreplay.log")
-
-    if not os.path.exists(f"./{ids_name}/tmp/err_tcpreplay.log"):
-        os.makedirs(f"./{ids_name}/tmp/err_tcpreplay.log")
+    tries = 0
+    while True:    
+        folder = "regular"
+        pcap="/pcap/smallFlows.pcap"
         
-    temp = open(f"./{ids_name}/tmp/temp_tcpreplay.log", "w")
-    err = open(f"./{ids_name}/tmp/err_tcpreplay.log", "w")
-    cmd = [
-        "sudo",
-        "docker", 
-        "exec", 
-        f"{ids_name}-container",
-        "tcpreplay",
-        "-i", interface,
-        f"--loop={loop}",
-        f"--mbps={speed}",
-        pcap
-    ]
-    # cmd = ["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/smallFlows.pcap"]
-    tcpreplay_proc = subprocess.Popen(cmd,stdout=temp, stderr=err)
-    # Log performance in seperate thread while {ids_name} is running and until tcpreplay is done
-    monitor_thread = Thread(target=log_performance, args=(filepath, f"{ids_name}", tcpreplay_proc))
-    monitor_thread.start()
-    time.sleep(1)
-    # Wait / Terminate tcp replay
-    print("Wait for TCP replay to finish", flush=True)
-    tcpreplay_proc.wait()
-    time.sleep(1)
-    print(f"Terminating tcpreplay..", flush=True)
-    tcpreplay_proc.terminate()
-    time.sleep(2)
-    # Wait / Terminate ids_proc
-    print(f"Termating {ids_name}..", flush=True)
 
-    if ids_name == "snort":
-        subprocess.run([
-            "sudo","docker", "exec", f"{ids_name}-container",
-            "bash", "-c", f"kill -SIGINT $(pgrep -fx './snort -i veth_host -c ../etc/snort/snort.lua')"
-        ])
-    else:
-        # subprocess.run(["docker", "exec", f"{ids_name}-container", "pkill", "-SIGINT", f"{ids_name}"])
-        subprocess.run([
-            "sudo", "docker", "exec", f"{ids_name}-container",
-            "bash", "-c", f"kill -SIGINT $(pgrep -f {ids_name})"
-        ])
-    time.sleep(1)
-    print(f"Wait for {ids_name} to finish", flush=True)
-    
-    
-    # End / join thread
-    print("Terminating monitor thread", flush=True)
-    monitor_thread.join()
-    # Check if throughput is correct
-    if not check_tcpreplay_throughput(ids_name,speed): # If not a match then restart with new loop length 
-        run(ids_name, loop, speed, interface, pcap)
+        if not os.path.exists(f"./{folder}/{str(ids_name)}/perf_files"):
+            print("Directory not found, creating directory...")
+            os.makedirs(f"./{folder}/{str(ids_name)}/perf_files")
+        filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
+        # Start IDS as a subprocess
+        print(f"Starting {ids_name}...", flush=True)
+        if not os.path.exists(f"./{ids_name}/tmp/temp.log"):
+            os.makedirs(f"./{ids_name}/tmp/temp.log")
+        if not os.path.exists(f"./{ids_name}/tmp/err.log"):
+            os.makedirs(f"./{ids_name}/tmp/err.log")
+            
+        temp = open(f"./{ids_name}/tmp/temp.log", "w")
+        err = open(f"./{ids_name}/tmp/err.log", "w")
+        ## DEPENDING ON IDS USE DIFFERENT COMMANDS
+
+        if ids_name == "suricata":
+            cmd = [
+                "sudo", 
+                "docker", 
+                "exec", 
+                "suricata-container", 
+                "bash", 
+                "-c",  
+                f"cd .. && cd .. && cd usr/local/bin && ./suricata -i {interface} -c ../etc/suricata/suricata.yaml"  
+            ]
+            # command = ["sudo", suricata_path, "-i", interface, "-l", "./suricata/logs"]
+            ids_proc = subprocess.Popen(cmd, stdout=temp, stderr=err) 
+            wait_for_suricata()
+        elif ids_name == "snort":
+            cmd = [
+                "sudo", 
+                "docker", 
+                "exec", 
+                "snort-container", 
+                "bash", 
+                "-c",  
+                f"cd bin && ./snort  -i {interface} -c ../etc/snort/snort.lua"  
+            ]
+            # command = ["sudo", snort_path, "-c", "../config/snort/snort.lua", "-i", interface]
+            ids_proc = subprocess.Popen(cmd, stdout=temp, stderr=err)
+            wait_for_snort()
+        elif ids_name == "zeek": 
+            cmd = [
+                "sudo", 
+                "docker", 
+                "exec", 
+                "zeek-container", 
+                "bash", 
+                "-c",
+                f"cd logs && zeek -C -i {interface} /usr/local/zeek/share/zeek/test-all-policy.zeek" 
+            ]
+            # command = ["sudo", zeek_path, "-i", interface]
+            ids_proc = subprocess.Popen(cmd, stdout=temp, stderr=err)
+            wait_for_zeek()
         
-    # Extract drop rate from ids
-    if ids_name == "suricata":
-        wait_for_suricata_drop_rates()
-        drop_rate, total_packets = extract_drop_rate_suricata()
-    elif ids_name == "snort":
-        wait_for_snort_drop_rates()
-        drop_rate, total_packets = extract_drop_rate_snort()
-    elif ids_name == "zeek":
-        wait_for_zeek_drop_rates()
-        drop_rate, total_packets = extract_drop_rate_zeek()
-    # Write drop rate to file
-    
-    with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
-        f.write(str(drop_rate))
-    with open(f"./{folder}/{ids_name}/perf_files/total_packets_{speed}.txt", "w") as f:
-        f.write(str(total_packets))
+        if ids_name == "snort":
+            time.sleep(10)      # TODO: change from sleep to something else - Give the process 10 seconds to intitate.
+                                # TODO: Maybe this should be scaled with the throughput for all IDSs.
+
+        # Start tcp replay
+        print("Starting tcp replay...", flush=True)
+        time.sleep(1)
+        if not os.path.exists(f"./{ids_name}/tmp/temp_tcpreplay.log"):
+            os.makedirs(f"./{ids_name}/tmp/temp_tcpreplay.log")
+
+        if not os.path.exists(f"./{ids_name}/tmp/err_tcpreplay.log"):
+            os.makedirs(f"./{ids_name}/tmp/err_tcpreplay.log")
+
+        temp = open(f"./{ids_name}/tmp/temp_tcpreplay.log", "w")
+        err = open(f"./{ids_name}/tmp/err_tcpreplay.log", "w")
+        cmd = [
+            "sudo",
+            "docker", 
+            "exec", 
+            f"{ids_name}-container",
+            "tcpreplay",
+            "-i", interface,
+            f"--loop={loop}",
+            f"--mbps={speed}",
+            pcap
+        ]
+        # cmd = ["sudo", "tcpreplay", "-i", interface, f"--loop={loop}", f"--mbps={speed}", "./pcap/smallFlows.pcap"]
+        tcpreplay_proc = subprocess.Popen(cmd,stdout=temp, stderr=err)
+        # Log performance in seperate thread while {ids_name} is running and until tcpreplay is done
+        monitor_thread = Thread(target=log_performance, args=(filepath, f"{ids_name}", tcpreplay_proc))
+        monitor_thread.start()
+        time.sleep(1)
+        # Wait / Terminate tcp replay
+        print("Wait for TCP replay to finish", flush=True)
+        tcpreplay_proc.wait()
+        time.sleep(1)
+        print(f"Terminating tcpreplay..", flush=True)
+        tcpreplay_proc.terminate()
+        time.sleep(2)
+        # Wait / Terminate ids_proc
+        print(f"Termating {ids_name}..", flush=True)
+
+        if ids_name == "snort":
+            subprocess.run([
+                "sudo","docker", "exec", f"{ids_name}-container",
+                "bash", "-c", f"kill -SIGINT $(pgrep -fx './snort -i veth_host -c ../etc/snort/snort.lua')"
+            ])
+        else:
+            # subprocess.run(["docker", "exec", f"{ids_name}-container", "pkill", "-SIGINT", f"{ids_name}"])
+            subprocess.run([
+                "sudo", "docker", "exec", f"{ids_name}-container",
+                "bash", "-c", f"kill -SIGINT $(pgrep -f {ids_name})"
+            ])
+        time.sleep(1)
+        print(f"Wait for {ids_name} to finish", flush=True)
+        
+        
+        # End / join thread
+        print("Terminating monitor thread", flush=True)
+        monitor_thread.join()
+        # Check if throughput is correct
+        if check_tcpreplay_throughput(ids_name,speed): # If not a match then restart with new loop length 
+            # Extract drop rate from ids
+            if ids_name == "suricata":
+                wait_for_suricata_drop_rates()
+                drop_rate, total_packets = extract_drop_rate_suricata()
+            elif ids_name == "snort":
+                wait_for_snort_drop_rates()
+                drop_rate, total_packets = extract_drop_rate_snort()
+            elif ids_name == "zeek":
+                wait_for_zeek_drop_rates()
+                drop_rate, total_packets = extract_drop_rate_zeek()
+            # Write drop rate to file
+            
+            with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
+                f.write(str(drop_rate))
+            with open(f"./{folder}/{ids_name}/perf_files/total_packets_{speed}.txt", "w") as f:
+                f.write(str(total_packets))
+            break
+        else:
+            tries += 1
+            original_interface = interface.split("_")[0]
+            restart_interface(original_interface)
+            run(ids_name, loop, speed, original_interface)
+            
+        
     
 def extract_drop_rate_zeek():
     log = "./zeek/tmp/err.log"

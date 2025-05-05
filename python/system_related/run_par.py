@@ -264,6 +264,8 @@ def remove_interface(interfaces):
                 subprocess.run(["sudo", "ip", "link", "delete", interface, "type", "dummy"],check=True)
             except subprocess.CalledProcessError as e:
                 print(f"Failed to create interfaces {e}")
+
+                
 def run_parallel(interface, first=10, last=60, step=10, loop=10):
     """
     Arguments for main():
