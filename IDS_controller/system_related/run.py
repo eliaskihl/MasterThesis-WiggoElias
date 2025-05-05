@@ -326,7 +326,9 @@ def run(interface, speed, loop):
             open(f"./zeekctl/tmp/err_tcpreplay.log", "w") as err:
             
             command = [
-            "docker", "exec", 
+            "sudo",
+            "docker", 
+            "exec", 
             "zeek-container",
             "tcpreplay",
             "-i", interface,
@@ -584,19 +586,7 @@ def count_crashed_nodes():
 def run_controller(interface, first=10, last=60, step=10, loop=10, workers=1,manager=1,proxy=1,logger=1):
     start = time.time()
     
-    """
-    data_group = parser.add_argument_group("Dataset options")
-    data_group.add_argument("--dataset", choices=["TII-SSRC-23", "UNSW-NB15", "BOT-IOT", "CIC-IDS2017"], 
-                           help="Choose a dataset")
-    data_group.add_argument("--pcap", help="Specify a PCAP file from the dataset")
-
-    generator_group = parser.add_argument_group("Traffic generator options")
-    generator_group.add_argument("--traffic-generator", choices=["ID2T"], help="Choose a traffic generator")
-    generator_group.add_argument("--attack", help="Specify an attack for traffic generation")
     
-    args = parser.parse_args()
-    """
-    # TODO: Add arguments for "first", "last", "step" and "number of nodes/deployments"
     first = int(first)
     last = int(last)
     step = int(step)
