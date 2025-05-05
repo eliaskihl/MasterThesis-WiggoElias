@@ -161,7 +161,8 @@ def run(ids_name, loop, speed, interface):
         filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{speed}.csv"
         # Start IDS as a subprocess
         print(f"Starting {ids_name}...", flush=True)
-        
+        if not os.path.exists(f"./{ids_name}/tmp/"):
+            os.makedirs(f"./{ids_name}/tmp/")
             
         temp = open(f"./{ids_name}/tmp/temp.log", "w")
         err = open(f"./{ids_name}/tmp/err.log", "w")
@@ -214,8 +215,7 @@ def run(ids_name, loop, speed, interface):
         # Start tcp replay
         print("Starting tcp replay...", flush=True)
         time.sleep(1)
-        if not os.path.exists(f"./{ids_name}/tmp/"):
-            os.makedirs(f"./{ids_name}/tmp/")
+        
 
    
 
