@@ -44,15 +44,16 @@ TOOLS = {
 
 # Dataset and pcap combinations
 DATASETS = {
-    # 'BOT-IOT': ['Theft/Data_Exfiltration/Data_Exfiltration.pcap'],
+    'BOT-IOT': ['Theft/Data_Exfiltration/Data_Exfiltration.pcap', 'Keylogging/keylogging.pcap'],
     'TII-SSRC-23': ['malicious/bruteforce/bruteforce_http.pcap', 'malicious/bruteforce/bruteforce_dns.pcap'],
-    # 'UNSW-NB15': ['pcaps_22-1-2015/pcaps_22-1-2015.pcap'],
-    # 'CIC-IDS2017': ['Tuesday-WorkingHours_small.pcap']
+    'UNSW-NB15': ['pcaps_22-1-2015/pcaps_22-1-2015.pcap'],
+    'CIC-IDS2017': ['Tuesday-WorkingHours_small.pcap']
 }
 
 # Traffic generator and attack combinations
 TRAFFIC_GENERATORS = {
-    'ID2T': ['EternalBlueExploit', 'PortscanAttack']
+    'ID2T': ['EternalBlueExploit', 'FTPWinaXeExploit', 'JoomlaRegPrivExploit', 'MS17ScanAttack', 'MemcrashedSpooferAttack','P2PBotnet',
+             'PortscanAttack', 'SMBLorisAttack', 'SMBScanAttack', 'SQLiAttack','SalityBotnet']
 }
 
 
