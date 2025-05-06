@@ -114,7 +114,10 @@ def vis(folder):
 
     if not os.path.exists(f"../../tables/{folder}/"):
         os.makedirs(f"../../tables/{folder}/")
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e7261f8e3b7e7055ad341ec42e2f86549735d3a
     df.to_csv(f"../../tables/{folder}/syseval.csv")
 
 
