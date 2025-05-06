@@ -153,9 +153,9 @@ def run(ids_name, loop, speed, interface, pcap):
                 drop_rate, total_packets = extract_drop_rate_zeek()
             # Write drop rate to file
             
-            with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{speed}.txt", "w") as f:
+            with open(f"./{folder}/{ids_name}/perf_files/drop_rate_{latency}.txt", "w") as f:
                 f.write(str(drop_rate))
-            with open(f"./{folder}/{ids_name}/perf_files/total_packets_{speed}.txt", "w") as f:
+            with open(f"./{folder}/{ids_name}/perf_files/total_packets_{latency}.txt", "w") as f:
                 f.write(str(total_packets))
             break
         else:
