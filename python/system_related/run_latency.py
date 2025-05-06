@@ -31,17 +31,15 @@ def run(ids_name, loop, speed, interface, pcap):
         latency = pcap.split(".")[0].split("_")[-1].split("us")[0]
         print("Latency:",latency)
         
-        # Fix filepath
-        pcap="/pcap/"+pcap
         
         if not os.path.exists(f"./{folder}/{str(ids_name)}/perf_files"):
             print("Directory not found, creating directory...")
-            os.makedirs(f"./{folder}/{str(ids_name)}/perf_files")
+            os.makedirs(f"./{folder}/{str(ids_name)}/perf_files", exist_ok=True)
         filepath = f"./{folder}/{ids_name}/perf_files/ids_performance_log_{latency}.csv"
         # Start IDS as a subprocess
         print(f"Starting {ids_name}...")
         if not os.path.exists(f"./{ids_name}/tmp/"):
-            os.makedirs(f"./{ids_name}/tmp/")
+            os.makedirs(f"./{ids_name}/tmp/", exist_ok=True)
         temp = open(f"./{ids_name}/tmp/temp.log", "w")
         err = open(f"./{ids_name}/tmp/err.log", "w")
         ## DEPENDING ON IDS USE DIFFERENT COMMANDS
@@ -164,7 +162,6 @@ def run(ids_name, loop, speed, interface, pcap):
             tries += 1
             original_interface = interface.split("_")[0]
             restart_interface(original_interface)
-            run(ids_name, loop, speed, original_interface)
 
 
 
@@ -174,7 +171,7 @@ def latency_eval(ids_name,loop,speed, interface):
         generate_pcap_file_latency_eval(1000,speed) 
     print(file_paths)
     for path in file_paths:
-        filename = os.path.basename(path)
+        filename = f"/pcap/{speed}/{os.path.basename(path)}"
         print(filename)  # Output: latency_128us.pcap
         print("Running with latency:", filename.split(".")[0].split("_")[-1].split("us")[0])
         run(ids_name, loop, speed, interface, pcap=filename) # Increase loop
@@ -230,7 +227,7 @@ def generate_pcap_file_latency_eval(pcap_file_size=1000, throughput_mbps=8):
         wrpcap(filename, ether_packets)
         print(f"Saved {filename} with {len(ether_packets)} packets.")
 
-    print("\nAll files have been saved.")
+    print("All files have been saved.")
 
 def run_latency(interface, speed, loop):
     start = time.time()
@@ -254,6 +251,7 @@ def run_latency(interface, speed, loop):
     print("Loop :", loop)
     print("Speed :", speed)
     for ids_name in ["zeek","snort","suricata"]:
+        
         latency_eval(ids_name,loop,speed,host_interface)
         restart_interface(interface)
     
@@ -262,8 +260,3 @@ def run_latency(interface, speed, loop):
     print("Runtime:",runtime)
     
     
-
-
-
-
-
