@@ -162,7 +162,6 @@ def run(ids_name, loop, speed, interface, pcap):
             tries += 1
             original_interface = interface.split("_")[0]
             restart_interface(original_interface)
-            run(ids_name, loop, speed, interface, pcap)
 
 
 
