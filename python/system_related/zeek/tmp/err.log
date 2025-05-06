@@ -1,5 +1,10 @@
-listening on eth0
+warning in /usr/local/zeek/share/zeek/policy/frameworks/telemetry/prometheus.zeek, line 1: deprecated script loaded from /usr/local/zeek/share/zeek/test-all-policy.zeek:81 "Remove in v7.1: Cluster nodes now implicitly listen on metrics port if set in cluster-layout."
+warning in /usr/local/zeek/share/zeek/policy/misc/load-balancing.zeek, line 4: deprecated script loaded from /usr/local/zeek/share/zeek/test-all-policy.zeek:89 "Remove in v7.1. This script has not seen extensions for the past 10 years and is not at all recommended to use for packet load balancing purposes. On Linux, AF_PACKET is recommended and works out of the box. On FreeBSD, there is Netmap with lb. Otherwise, NIC specific packet sources and approaches exist that handle the load balancing."
+warning in /usr/local/zeek/share/zeek/policy/tuning/defaults/__load__.zeek, line 1: deprecated script loaded from /usr/local/zeek/share/zeek/policy/tuning/__load__.zeek:2 "Remove in v7.1 The policy/tuning/defaults package is deprecated. The options set here are now the defaults for Zeek in general.";
+warning in /usr/local/zeek/share/zeek/policy/tuning/defaults/extracted_file_limits.zeek, line 1: deprecated script loaded from /usr/local/zeek/share/zeek/test-all-policy.zeek:147 "Remove in v7.1 The policy/tuning/defaults package is deprecated. The options set here are now the defaults for Zeek in general.";
+warning in /usr/local/zeek/share/zeek/policy/tuning/defaults/packet-fragments.zeek, line 1: deprecated script loaded from /usr/local/zeek/share/zeek/test-all-policy.zeek:148 "Remove in v7.1 The policy/tuning/defaults package is deprecated. The options set here are now the defaults for Zeek in general.";
+warning in /usr/local/zeek/share/zeek/policy/tuning/defaults/warnings.zeek, line 1: deprecated script loaded from /usr/local/zeek/share/zeek/test-all-policy.zeek:149 "Remove in v7.1 The policy/tuning/defaults package is deprecated. The options set here are now the defaults for Zeek in general.";
+listening on veth_host
 
-1741166566.847335 warning in /usr/local/zeek/share/zeek/base/misc/find-checksum-offloading.zeek, line 54: Your interface is likely receiving invalid TCP checksums, most likely from NIC checksum offloading.  By default, packets with invalid checksums are discarded by Zeek unless using the -C command-line option or toggling the 'ignore_checksums' variable.  Alternatively, disable checksum offloading by the network adapter to ensure Zeek analyzes the actual checksums that are transmitted.
-1741166700.862085 received termination signal
-1741166700.862085 791639 packets received on interface eth0, 0 (0.00%) dropped, 286 (0.04%) not processed
+1746445413.565478 received termination signal
+1746445413.565478 142657 packets received on interface veth_host, 0 (0.00%) dropped, 0 (0.00%) not processed

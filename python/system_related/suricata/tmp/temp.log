@@ -1,18 +1,5 @@
-i: suricata: This is Suricata version 7.0.8 RELEASE running in SYSTEM mode
-i: threads: Threads created -> W: 1 FM: 1 FR: 1   Engine started.
-ii: suricata: Signal Received.  Stopping engine.
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
-W: af-packet: wlp1s0: failed to poll interface: Network is down
+i: suricata: This is Suricata version 7.0.10 RELEASE running in SYSTEM mode
+W: af-packet: veth_host: AF_PACKET tpacket-v3 is recommended for non-inline operation
+i: threads: Threads created -> W: 16 FM: 1 FR: 1   Engine started.
+i: suricata: Signal Received.  Stopping engine.
+i: device: veth_host: packets: 142624, drops: 0 (0.00%), invalid chksum: 0

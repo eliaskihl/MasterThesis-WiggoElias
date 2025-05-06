@@ -38,7 +38,7 @@ def process_suricata_logs_CICIDS2017(pcap_file):
     df_gt['flow_alerted'] = df_gt['flow_alerted'].apply(lambda x: False if x == 'BENIGN' else True)
     df_gt['src_port'] = pd.to_numeric(df_gt['src_port'], errors='coerce').astype('Int64')
     df_gt['dest_port'] = pd.to_numeric(df_gt['dest_port'], errors='coerce').astype('Int64')
-    df_gt['proto'] = df_gt['proto'].replace({6: 'tcp', 17: 'udp', 0: 'hopopt'})
+    df_gt['proto'] = df_gt['proto'].replace({6: 'tcp', 17: 'udp', 0: 'hopopt', 1: 'icmp'})
     
     # +7200 because of timezone difference 
     df_gt['start_time'] = df_gt['start_time'].apply(lambda x: int(datetime.strptime(x.split('.')[0], '%Y-%m-%d %H:%M:%S').timestamp()) if pd.notnull(x) else None)    

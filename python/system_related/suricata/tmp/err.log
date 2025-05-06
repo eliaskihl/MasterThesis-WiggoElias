@@ -1,2 +1,0 @@
-E: af-packet: fanout not supported by kernel: Kernel too old or cluster-id 1 already in use.
-E: flow-manager: unable to get all flow manager threads to shutdown in time

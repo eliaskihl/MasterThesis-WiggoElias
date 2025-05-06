@@ -1,8 +1,8 @@
-Actual: 14261 packets (9216531 bytes) sent in 0.737323 seconds
-Rated: 12499991.1 Bps, 99.99 Mbps, 19341.59 pps
-Flows: 1209 flows, 1639.71 fps, 14243 unique flow packets, 18 unique non-flow packets
-Statistics for network device: tap0
-	Successful packets:        14261
+Actual: 142610 packets (92165310 bytes) sent in 73.73 seconds
+Rated: 1249999.9 Bps, 9.99 Mbps, 1934.16 pps
+Flows: 1209 flows, 16.39 fps, 142430 unique flow packets, 180 unique non-flow packets
+Statistics for network device: veth_host
+	Successful packets:        142610
 	Failed packets:            0
 	Truncated packets:         0
 	Retried packets (ENOBUFS): 0
