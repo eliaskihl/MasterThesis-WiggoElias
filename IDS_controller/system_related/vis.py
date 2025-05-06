@@ -185,7 +185,7 @@ def calc_mean(df,speed):
     print("avg_usge:",avg_usage)
     return avg_usage,list_of_roles
 
-def visualize():
+def vis():
     speeds = []
     network_dict = {}
     print("Current Working Directory:", os.getcwd())
@@ -302,6 +302,6 @@ def visualize():
 
 
 def visualize_controller():
-    visualize()
+    vis()
 
 

@@ -53,7 +53,7 @@ def sort_directory(path, by='name', descending=False):
 def natural_sort(file_list):
     return sorted(file_list, key=lambda s: [int(t) if t.isdigit() else t.lower()
                                             for t in re.split(r'(\d+)', s)])
-def visualize(folder):
+def vis(folder):
     x_value = "Throughput"
     if folder == "latency":
         x_value = "Latency"
@@ -167,7 +167,7 @@ def visualize(folder):
     # Folder is the type, throughput or latency
     start = time.time()
 
-    visualize(folder)
+    vis(folder)
     end = time.time()
     print("Runtime:",end-start)
 
