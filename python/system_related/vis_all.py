@@ -110,9 +110,12 @@ def vis(folder):
                        "Packet_Analysis_Rate":"Packet_Analysis_Rate_zeek", "Total_Packets_Sent":"Total_Packets_Sent_zeek"}, inplace=True)
     print(df)
     # Save dataframe in a folder
+    print("testt")
+
     if not os.path.exists(f"../../tables/{folder}/"):
         os.makedirs(f"../../tables/{folder}/")
-        df.to_csv(f"../../tables/{folder}/syseval.csv")
+
+    df.to_csv(f"../../tables/{folder}/syseval.csv")
 
 
     if not os.path.exists(f"../../img/{folder}/"):

@@ -1,3 +1,0 @@
-1421927457.819504 warning in /usr/local/zeek/share/zeek/base/frameworks/files/main.zeek, line 523: get_file_handle() handler missing for Analyzer::ANALYZER_POP3
-1421932089.215107 error in /usr/local/zeek/share/zeek/base/protocols/sip/main.zeek, line 213: bad conversion to count (to_count(SIP::value) and THOeDPzLMP)
-1421932089.215115 error in /usr/local/zeek/share/zeek/base/protocols/sip/main.zeek, line 213: bad conversion to count (to_count(SIP::value) and THOeDPzLMP)

@@ -44,10 +44,10 @@ TOOLS = {
 
 # Dataset and pcap combinations
 DATASETS = {
-    'BOT-IOT': ['Theft/Data_Exfiltration/Data_Exfiltration.pcap'],
-    'TII-SSRC-23': ['malicious/bruteforce/bruteforce_http.pcap'],
-    'UNSW-NB15': ['pcaps_22-1-2015/pcaps_22-1-2015.pcap'],
-    'CIC-IDS2017': ['Tuesday-WorkingHours_small.pcap']
+    # 'BOT-IOT': ['Theft/Data_Exfiltration/Data_Exfiltration.pcap'],
+    'TII-SSRC-23': ['malicious/bruteforce/bruteforce_http.pcap', 'malicious/bruteforce/bruteforce_dns.pcap'],
+    # 'UNSW-NB15': ['pcaps_22-1-2015/pcaps_22-1-2015.pcap'],
+    # 'CIC-IDS2017': ['Tuesday-WorkingHours_small.pcap']
 }
 
 # Traffic generator and attack combinations
@@ -81,7 +81,6 @@ def run_datasets(results):
                             "tool": tool,
                             "dataset": dataset,
                             "pcap": pcap,
-                            "error": "No alerts or no result"
                         })
 
                 except Exception as e:
@@ -89,7 +88,6 @@ def run_datasets(results):
                         "tool": tool,
                         "dataset": dataset,
                         "pcap": pcap,
-                        "error": str(e)
                     })
 
 def run_traffic_generators(results):
@@ -119,7 +117,6 @@ def run_traffic_generators(results):
                             "tool": tool,
                             "traffic_generator": traffic_generator,
                             "attack": attack,
-                            "error": "No alerts or no result"
                         })
 
                 except Exception as e:
@@ -127,13 +124,12 @@ def run_traffic_generators(results):
                         "tool": tool,
                         "traffic_generator": traffic_generator,
                         "attack": attack,
-                        "error": str(e)
                     })
 
 # ----------------- Argument Parsing --------------------
 parser = argparse.ArgumentParser(description="Run specified security tools from the root directory")
-parser.add_argument("--tool", required=True, help="Name of the tool to run (e.g., suricata, snort, zeek)")
-parser.add_argument("--dataset", help="Name of the dataset to run (optional for single runs)")
+parser.add_argument("-tool", required=True, help="Name of the tool to run (e.g., suricata, snort, zeek)")
+parser.add_argument("-dataset", help="Name of the dataset to run (optional for single runs)")
 parser.add_argument("-i",help="interface")
 parser.add_argument("-b",help="begin")
 parser.add_argument("-e",help="end")
@@ -144,10 +140,10 @@ parser.add_argument("-workers",help="Number of workers")
 parser.add_argument("-manager",help="Number of managers")
 parser.add_argument("-proxy",help="Number of proxies")
 parser.add_argument("-logger",help="Number of loggers")
-parser.add_argument("--pcap", help="Path to the pcap file (optional for single runs)")
-parser.add_argument("--traffic_generator", help="Name of the traffic generator (optional for single runs)")
-parser.add_argument("--attack", help="Attack to simulate (optional for single runs)")
-parser.add_argument("--type",help="Choose to viszualize the latency or throughput files, (can be latency or throughput)")
+parser.add_argument("-pcap", help="Path to the pcap file (optional for single runs)")
+parser.add_argument("-traffic_generator", help="Name of the traffic generator (optional for single runs)")
+parser.add_argument("-attack", help="Attack to simulate (optional for single runs)")
+parser.add_argument("-type",help="Choose to viszualize the latency or throughput files, (can be latency or throughput)")
 parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments for the script")
 
 args = parser.parse_args()
@@ -211,14 +207,13 @@ if args.dataset and args.pcap:
                 "tool": tool,
                 "dataset": args.dataset,
                 "pcap": args.pcap,
-                "error": "No alerts or no result"
             })
 
         df = pd.DataFrame(results)
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-        df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
-        print("Results saved to run_results.csv")
+        df.to_csv('./tables/classification_evaluation/classifications.csv', index=False)
+        print("Results saved to classifications.csv")
     except Exception as e:
         print(f"Error while running single dataset: {e}")
     exit(0)
@@ -250,14 +245,13 @@ if args.traffic_generator and args.attack:
                 "tool": tool,
                 "traffic_generator": args.traffic_generator,
                 "attack": args.attack,
-                "error": "No alerts or no result"
             })
 
         df = pd.DataFrame(results)
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-        df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
-        print("Results saved to run_results.csv")
+        df.to_csv('./tables/classification_evaluation/classifications.csv', index=False)
+        print("Results saved to classifications.csv")
     except Exception as e:
         print(f"Error while running single attack: {e}")
     exit(0)
@@ -270,8 +264,8 @@ if args.tool == "datasets":
     if 'tool' in df.columns:
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-    df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
-    print("Results saved to run_results.csv")
+    df.to_csv('./tables/classification_evaluation/classifications.csv', index=False)
+    print("Results saved to classifications.csv")
     exit(0)
 
 # Special case: run all traffic generators
@@ -282,8 +276,8 @@ if args.tool == "traffic_generators":
     if 'tool' in df.columns:
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-    df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
-    print("Results saved to run_results.csv")
+    df.to_csv('./tables/classification_evaluation/classifications.csv', index=False)
+    print("Results saved to classifications.csv")
     exit(0)
 
 # Run both datasets and traffic generators
@@ -295,8 +289,8 @@ if args.tool == "datasets_traffic_generators":
     if 'tool' in df.columns:
         cols = ['tool'] + [col for col in df.columns if col != 'tool']
         df = df[cols]
-    df.to_csv('./tables/dataset_classification/run_results.csv', index=False)
-    print("Results saved to run_results.csv")
+    df.to_csv('./tables/classification_evaluation/classifications.csv', index=False)
+    print("Results saved to classifications.csv")
     exit(0)
 
 # Fallback: direct script dispatch

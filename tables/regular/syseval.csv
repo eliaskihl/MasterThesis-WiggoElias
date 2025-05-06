@@ -1,0 +1,2 @@
+,Throughput,CPU_Usage_zeek,Memory_Usage_zeek,Drop_Rate_zeek,Packet_Analysis_Rate_zeek,Total_Packets_Sent_zeek,CPU_Usage_suricata,Memory_Usage_suricata,Drop_Rate_suricata,Packet_Analysis_Rate_suricata,Total_Packets_Sent_suricata,CPU_Usage_snort,Memory_Usage_snort,Drop_Rate_snort,Packet_Analysis_Rate_snort,Total_Packets_Sent_snort
+0,10,17.882857142857137,1.8,0.0,2377.616666666667,142657.0,25.685714285714287,7.3,0.0,2377.0666666666666,142624.0,21.26571428571428,3.2,0.0,2377.0,142620.0
