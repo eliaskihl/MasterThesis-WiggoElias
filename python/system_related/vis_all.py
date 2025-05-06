@@ -114,7 +114,6 @@ def vis(folder):
 
     if not os.path.exists(f"../../tables/{folder}/"):
         os.makedirs(f"../../tables/{folder}/")
-        
     df.to_csv(f"../../tables/{folder}/syseval.csv")
 
 
@@ -173,6 +172,5 @@ def visualize(folder):
     vis(folder)
     end = time.time()
     print("Runtime:",end-start)
-
 
 
