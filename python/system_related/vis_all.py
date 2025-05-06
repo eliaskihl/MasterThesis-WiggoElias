@@ -112,7 +112,7 @@ def vis(folder):
     # Save dataframe in a folder
     if not os.path.exists(f"../../tables/{folder}/"):
         os.makedirs(f"../../tables/{folder}/")
-        df.to_csv(f"../../tables/{folder}/syseval.csv")
+    df.to_csv(f"../../tables/{folder}/syseval.csv")
 
 
     if not os.path.exists(f"../../img/{folder}/"):

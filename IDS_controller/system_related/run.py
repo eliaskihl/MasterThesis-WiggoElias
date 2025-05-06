@@ -42,7 +42,7 @@ def init_controller():
     # Comments out the required lines for Zeekctl to begin
     new_lines = []
     counter = 0
-    print("Current Working Directory:", os.getcwd())
+    
     filepath ="./../../python/ids_configuration/zeek/config/zeek/node.cfg"
     with open(filepath, "r") as file:
         for line in file:
@@ -253,6 +253,8 @@ def log_performance(log_file,tcp_proc):
                         cmdline = "Permission Denied"
                     #print("Role:",get_zeek_role(cmdline))
                     role = get_zeek_role(cmdline)
+                    if role == "Unkown":
+                        continue
                     cpu_usage = proc.info["cpu_percent"]
                     rss_mem = proc.info["memory_info"].rss # Physical memory occupied by process
                     # Get the total system memory (in bytes)
@@ -302,7 +304,7 @@ def run(interface, speed, loop):
         filepath = f"./zeekctl/perf_files/ids_performance_log_{speed}.csv"
         # Start IDS as a subprocess
         print(f"Starting zeekctl...")
-        if not os.path.exists(f"./tcp_replay/tmp/"):
+        if not os.path.exists(f"./zeekctl/tmp/"):
             print("Directory not found, creating directory...")
             os.makedirs(f"./zeekctl/tmp/", exist_ok=True)
         with open(f"./zeekctl/tmp/temp.log", "w") as temp, \
