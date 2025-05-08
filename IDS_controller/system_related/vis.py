@@ -12,19 +12,36 @@ import seaborn as sns
 def crashed_plot(throughput):
     with open(f"./zeekctl/perf_files/count_crashed_{str(throughput)}.txt", "rb") as file:
         crashes = eval(file.read())
-    N = len(crashes.keys())
-    df = pd.Series(np.random.randint(10,50,N), index=np.arange(1,N+1))
+    df = pd.DataFrame()
+    file = "./node_shutdowns.csv"
+    if os.path.exists(file) and os.path.getsize(file) > 0:
+            with open(file, "r") as f:
+                df_tot = pd.read_csv(f)
+    else:
+        df_tot = pd.DataFrame()
+   
+    row = {"Throughput": throughput}
 
-    cmap = plt.cm.tab10
+    for rol,freq in crashes.items():
+        col_name = f"Shutdowns_for_{rol}"
+        row[col_name] = freq
+
+    df = pd.DataFrame([row])
+        
+    
+    # Append to total df
+    df_tot = pd.concat([df_tot,df])
+    # Save df
+    df_tot.to_csv(file,index=False)
 
     roles = list(crashes.keys())
     freq = list(crashes.values())
     data = pd.DataFrame(list(zip(roles,freq)),columns=["role","freq"])
+    
 
-    colors = cmap(np.arange(len(df)) % cmap.N)
+    
     sns.set_style("whitegrid")
     sns.barplot(data,x="role",y="freq",palette='Set1')
-
     plt.xlabel('')
     plt.ylabel("Number of shutdowns")
     plt.title("Number of shutdowns per node")
@@ -38,7 +55,7 @@ def latency_plot(throughput):
     # Flatten to single-row DataFrame
     df = pd.DataFrame()
     file = "./df_latency_between_nodes.csv"
-    if os.path.exists(file):
+    if os.path.exists(file) and os.path.getsize(file) > 0:
             with open(file, "r") as f:
                 df_tot = pd.read_csv(f)
     else:
@@ -46,17 +63,27 @@ def latency_plot(throughput):
     # Temporary dataframe
     df = pd.DataFrame()
     G = nx.MultiDiGraph()  # Supports directional and multiple edges
+    row = {"Throughput": throughput}
 
     # Build graph
     for (src, dst), latency in latencies.items():
         G.add_edge(src, dst, weight=latency)
-        df[f"Latency_between_{src}_{dst}"] = [latency]
-        print(src,dst,latency)
-    print(df)
+        
+        
+        col_name = f"Latency_{src}_{dst}"
+        row[col_name] = latency
+        # print(src, dst, latency)
+        
+   
+    #print(src, dst, latency)
+
+    df = pd.DataFrame([row])
+        
+    #print(df)
     # Append to total df
-    pd.concat([df_tot,df])
+    df_tot = pd.concat([df_tot,df])
     # Save df
-    df_tot.to_csv(file)
+    df_tot.to_csv(file,index=False)
 
 
     # Layout
@@ -117,7 +144,6 @@ def extract_network_usage(df):
     #df = df.drop(df.columns.difference(["Upload_Speed",'Download_Speed']), 1, inplace=True)
     avg_upload_speed = df["Upload_Speed"].mean()
     avg_download_speed = df["Download_Speed"].mean()
-    print(type(avg_download_speed))
     return avg_download_speed,avg_upload_speed
 
 def network_plot(data_dict):
@@ -125,9 +151,6 @@ def network_plot(data_dict):
     speeds = list(data_dict.keys())
     uploads = [val[1] for val in data_dict.values()]
     downloads = [val[0] for val in data_dict.values()]
-    print("speeds:",speeds)
-    print("uploads",uploads)
-    print("downloasd",downloads)
     plt.plot(speeds,uploads, label="Upload Speed")
     plt.plot(speeds,downloads,label="Download Speed")
     plt.title("Network Usage")
@@ -153,14 +176,7 @@ def calc_mean(df,speed):
         # drop_file = f"./zeekctl/perf_files/drop_rate_{role}_{speed}.txt"
         total_file = f"./zeekctl/perf_files/total_packets_{role}_{speed}.txt"
         tcp_drop_file = f"./zeekctl/perf_files/tcpreplay_drop_rate_{role}_{speed}.txt" 
-        # if os.path.exists(drop_file):
-        #     with open(drop_file, "r") as f:
-        #         drop_rate = float(f.read())
-        # else:
-        #         drop_rate = 0.0
-
-        # list_of_drop_rates_values.append(drop_rate)
-
+        
         if os.path.exists(total_file):
             with open(total_file, "r") as f:
                 total_packets = float(f.read())
@@ -181,21 +197,20 @@ def calc_mean(df,speed):
     # avg_usage["Drop_Rate"] = list_of_drop_rates_values
     avg_usage["Drop_Rate"] = list_of_drop_rates_tcpreplay
     avg_usage["Total_Packets"] = list_of_total_packets
-    print("list",list_of_roles)
-    print("avg_usge:",avg_usage)
+    
     return avg_usage,list_of_roles
 
 def vis():
     speeds = []
     network_dict = {}
-    print("Current Working Directory:", os.getcwd())
+    
     final_df = pd.DataFrame()
     files = glob.glob(f"./zeekctl/perf_files/ids_performance_log*.csv")
     files = sorted(files, key=lambda x: int(re.search(r'(\d+)', x).group()))
     print(files)
     for file in files:
         speeds = []
-        print("File", file)
+        
         
         
         speed = (int(file.split("_")[-1].split(".")[0]))
@@ -210,16 +225,16 @@ def vis():
 
         for i in range(len(list_of_roles)):
             speeds.append(speed)
-        print(speeds)
         
-        df["Speeds"] = speeds
         
-        print("first_Df:",df)
+        df["Throughput"] = speeds
         
-        pivot_df = df.pivot_table(index="Speeds", columns="Role", values=["CPU_Usage", "Memory_Usage", "Drop_Rate", "Total_Packets"])
+        
+        
+        pivot_df = df.pivot_table(index="Throughput", columns="Role", values=["CPU_Usage", "Memory_Usage", "Drop_Rate", "Total_Packets"])
         pivot_df.columns = [f"{col[1]}_{col[0]}" for col in pivot_df.columns] # Keep the CPU and Memory labels in the column names
         pivot_df.reset_index(inplace=True)
-        print("pivot:",pivot_df)
+        
     
         # Merge with the final_df
         if final_df.empty:
@@ -232,6 +247,7 @@ def vis():
     speeds = []     
   
     print("Final:\n",final_df)
+    
     
     if not os.path.exists(f"../../img/controller/"):
         os.makedirs(f"../../img/controller")
@@ -251,10 +267,19 @@ def vis():
     # Save csv
     if not os.path.exists(f"../../tables/controller/"):
         os.makedirs(f"../../tables/controller/")
-    final_df.to_csv(f"../../tables/controller/syseval.csv")
-    print("saved")
 
-    final_df.plot(x="Speeds", y=cpu_names, kind="bar", figsize=(width,height), label=list_of_roles)
+    # Append latency and shutdown dfs
+    latency_df = pd.read_csv("./df_latency_between_nodes.csv")
+    shutdown_df = pd.read_csv("./node_shutdowns.csv")
+    final_df = pd.merge(final_df, latency_df, on='Throughput', how='inner') 
+    final_df = pd.merge(final_df,shutdown_df, on='Throughput', how='inner')
+    # Clean Unknown role
+    final_df = final_df.loc[:, ~final_df.columns.str.contains('Unknown')]
+    final_df.to_csv(f"../../tables/controller/syseval.csv")
+    
+    print("Final2:\n",final_df)
+
+    final_df.plot(x="Throughput", y=cpu_names, kind="bar", figsize=(width,height), label=list_of_roles)
     plt.title(f"CPU Usage Zeekctl")
     plt.ylabel("CPU (%)")
     plt.xlabel("Throughput (Mbps)")
@@ -262,7 +287,7 @@ def vis():
     plt.savefig(f"../../img/controller/cpu.png")
     plt.clf()  # Clear the figure
 
-    final_df.plot(x="Speeds", y=mem_names, kind="bar", figsize=(width,height),  label=list_of_roles)
+    final_df.plot(x="Throughput", y=mem_names, kind="bar", figsize=(width,height),  label=list_of_roles)
     plt.title(f"Memory Usage Zeekctl")
     plt.ylabel("Memory (%)")
     plt.xlabel("Throughput (Mbps)")
@@ -270,7 +295,7 @@ def vis():
     plt.savefig(f"../../img/controller/memory.png")
     plt.clf()  # Clear the figure
 
-    final_df.plot(x="Speeds", y=drop_names, kind="bar", figsize=(width,height),  label=list_of_roles)
+    final_df.plot(x="Throughput", y=drop_names, kind="bar", figsize=(width,height),  label=list_of_roles)
     plt.title(f"Drop Rate Zeekctl")
     plt.ylabel("Drop Rate (%)")
     plt.xlabel("Throughput (Mbps)")
@@ -278,7 +303,7 @@ def vis():
     plt.savefig(f"../../img/controller/drop_rate.png")
     plt.clf()  # Clear the figure
 
-    # final_df.plot(x="Speeds", y=acc_drop_names, kind="bar", figsize=(width,height),  label=list_of_roles)
+    # final_df.plot(x="Throughput", y=acc_drop_names, kind="bar", figsize=(width,height),  label=list_of_roles)
     # plt.title(f"Actual Drop Rate Zeekctl")
     # plt.ylabel("Drop Rate (%)")
     # plt.xlabel("Throughput (Mbps)")
@@ -286,7 +311,7 @@ def vis():
     # plt.savefig(f"../../img/controller/actual_drop_rate.png")
     # plt.clf()  # Clear the figure
 
-    final_df.plot(x="Speeds", y=total_names, kind="bar", figsize=(width,height),  label=list_of_roles)
+    final_df.plot(x="Throughput", y=total_names, kind="bar", figsize=(width,height),  label=list_of_roles)
     plt.title(f"Total Packets Zeekctl")
     plt.ylabel("Number of packets")
     plt.xlabel("Throughput (Mbps)")
@@ -301,6 +326,13 @@ def vis():
 
 
 def visualize_controller():
+    # Clean latency file before start
+    file = "./df_latency_between_nodes.csv"
+    open(file, "w").close()
+    # Clean num of shutdowns file before start
+    file = "./node_shutdowns.csv"
+    open(file, "w").close()    
+
     vis()
 
 
