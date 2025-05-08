@@ -44,8 +44,41 @@ TOOLS = {
 
 # Dataset and pcap combinations
 DATASETS = {
-    'BOT-IOT': ['Theft/Data_Exfiltration/Data_Exfiltration.pcap', 'Keylogging/keylogging.pcap'],
-    'TII-SSRC-23': ['malicious/bruteforce/bruteforce_http.pcap', 'malicious/bruteforce/bruteforce_dns.pcap'],
+    'BOT-IOT': ['Theft/Data_Exfiltration/Data_Exfiltration.pcap', 'Theft/Keylogging/keylogging.pcap', 'DoS/DoS_HTTP/DoS_HTTP.pcap', 'Scan/Service/Service.pcap'],
+    'TII-SSRC-23': [
+        # 'benign/audio/audio.pcap',
+        # 'benign/background/background.pcap',
+        # 'benign/text/text.pcap',
+        # 'benign/video/http.pcap',
+        # 'benign/video/rtp.pcap',
+        # 'benign/video/udp.pcap',
+        # 'malicious/bruteforce/bruteforce_dns.pcap',
+        # 'malicious/bruteforce/bruteforce_ftp.pcap',
+        'malicious/bruteforce/bruteforce_http.pcap',
+        # 'malicious/bruteforce/bruteforce_ssh.pcap',
+        # 'malicious/bruteforce/bruteforce_telnet.pcap',
+        'malicious/dos/ack_tcp_dos.pcap',
+        # 'malicious/dos/cwr_tcp_dos.pcap',
+        # 'malicious/dos/ecn_tcp_dos.pcap',
+        # 'malicious/dos/fin_tcp_dos.pcap',
+        # 'malicious/dos/http_dos.pcap',
+        # 'malicious/dos/icmp_dos.pcap',
+        # 'malicious/dos/mac_dos.pcap',
+        # 'malicious/dos/psh_tcp_dos.pcap',
+        # 'malicious/dos/rst_tcp_dos.pcap',
+        #'malicious/dos/syn_tcp_dos.pcap',
+        # 'malicious/dos/udp_dos.pcap',
+        # 'malicious/dos/urg_tcp_dos.pcap',
+        # 'malicious/information-gathering/information_gathering.pcap',
+        # 'malicious/mirai-botnet/mirai_ddos_ack.pcap',
+        # 'malicious/mirai-botnet/mirai_ddos_dns.pcap',
+        # 'malicious/mirai-botnet/mirai_ddos_greeth.pcap',
+        # 'malicious/mirai-botnet/mirai_ddos_greip.pcap',
+        # 'malicious/mirai-botnet/mirai_ddos_http.pcap',
+        'malicious/mirai-botnet/mirai_ddos_syn.pcap',
+        # 'malicious/mirai-botnet/mirai_ddos_udp_udpplain.pcap',
+        'malicious/mirai-botnet/mirai_scan_bruteforce.pcap'
+    ],
     'UNSW-NB15': ['pcaps_22-1-2015/pcaps_22-1-2015.pcap'],
     'CIC-IDS2017': ['Tuesday-WorkingHours_small.pcap']
 }

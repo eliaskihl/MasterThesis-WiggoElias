@@ -6,5 +6,3 @@ warning in /usr/local/zeek/share/zeek/policy/tuning/defaults/packet-fragments.ze
 warning in /usr/local/zeek/share/zeek/policy/tuning/defaults/warnings.zeek, line 1: deprecated script loaded from /usr/local/zeek/share/zeek/test-all-policy.zeek:149 "Remove in v7.1 The policy/tuning/defaults package is deprecated. The options set here are now the defaults for Zeek in general.";
 listening on veth_host
 
-1746521817.107536 received termination signal
-1746521817.107536 1032 packets received on interface veth_host, 0 (0.00%) dropped, 0 (0.00%) not processed

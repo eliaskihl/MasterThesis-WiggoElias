@@ -6,18 +6,18 @@ def process_snort_logs_BOTIOT(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
     pcap_to_gt_map = {
     "../datasets/BOT-IOT/pcap/DDoS/DDoS_HTTP/DDoS_HTTP.pcap": "../datasets/BOT-IOT/ground_truth/DDoS_HTTP.csv",
-    "../datasets/BOT-IOT/pcap/DDoS/DDoS_HTTP/DDoS_UDP.pcap": "../datasets/BOT-IOT/ground_truth/DDoS_UDP.csv",
-    "../datasets/BOT-IOT/pcap/DDoS/DDoS_HTTP/DDoS_TCP.pcap": "../datasets/BOT-IOT/ground_truth/DDoS_TCP.csv",
+    "../datasets/BOT-IOT/pcap/DDoS/DDoS_UDP/DDoS_UDP.pcap": "../datasets/BOT-IOT/ground_truth/DDoS_UDP.csv",
+    "../datasets/BOT-IOT/pcap/DDoS/DDoS_TCP/DDoS_TCP.pcap": "../datasets/BOT-IOT/ground_truth/DDoS_TCP.csv",
 
     "../datasets/BOT-IOT/pcap/DoS/DoS_HTTP/DoS_HTTP.pcap": "../datasets/BOT-IOT/ground_truth/DoS_HTTP.csv",
-    "../datasets/BOT-IOT/pcap/DoS/DoS_HTTP/DoS_UDP.pcap": "../datasets/BOT-IOT/ground_truth/DoS_UDP.csv",
-    "../datasets/BOT-IOT/pcap/DoS/DoS_HTTP/DoS_TCP.pcap": "../datasets/BOT-IOT/ground_truth/DoS_TCP.csv",
+    "../datasets/BOT-IOT/pcap/DoS/DoS_UDP/DoS_UDP.pcap": "../datasets/BOT-IOT/ground_truth/DoS_UDP.csv",
+    "../datasets/BOT-IOT/pcap/DoS/DoS_TCP/DoS_TCP.pcap": "../datasets/BOT-IOT/ground_truth/DoS_TCP.csv",
     
     "../datasets/BOT-IOT/pcap/Scan/Service/Service.pcap": "../datasets/BOT-IOT/ground_truth/Service_Scan.csv",
     "../datasets/BOT-IOT/pcap/Scan/OS/OS.pcap": "../datasets/BOT-IOT/ground_truth/OS_Scan.csv",
 
     "../datasets/BOT-IOT/pcap/Theft/Data_Exfiltration/Data_Exfiltration.pcap": "../datasets/BOT-IOT/ground_truth/Data_exfiltration.csv",
-    "../datasets/BOT-IOT/pcap/Theft/Keylogging/Keylogging.pcap": "../datasets/BOT-IOT/ground_truth/Keylogging.csv",
+    "../datasets/BOT-IOT/pcap/Theft/Keylogging/keylogging.pcap": "../datasets/BOT-IOT/ground_truth/Keylogging.csv",
     }
 
     gt_path = pcap_to_gt_map.get(pcap_file) 

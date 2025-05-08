@@ -418,7 +418,7 @@ def update_and_clean_docker_logs():
         os.makedirs(local_config_file)
     # Run the Docker command to copy logs from the container to the local system
     try:
-        subprocess.run(["docker", "cp", f"zeek-container:{container_config_path}", local_config_file], check=True)
+        subprocess.run(["sudo", "docker", "cp", f"zeek-container:{container_config_path}", local_config_file], check=True)
         #print(f"Logs successfully copied from container 'zeek-container' to {local_config_file}")
     except subprocess.CalledProcessError as e:
         print(f"Error: Failed to copy logs from the container. Details: {e}")

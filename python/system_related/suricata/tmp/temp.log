@@ -2,4 +2,4 @@ i: suricata: This is Suricata version 7.0.10 RELEASE running in SYSTEM mode
 W: af-packet: veth_host: AF_PACKET tpacket-v3 is recommended for non-inline operation
 i: threads: Threads created -> W: 16 FM: 1 FR: 1   Engine started.
 i: suricata: Signal Received.  Stopping engine.
-i: device: veth_host: packets: 1004, drops: 0 (0.00%), invalid chksum: 0
+i: device: veth_host: packets: 142618, drops: 283 (0.20%), invalid chksum: 0

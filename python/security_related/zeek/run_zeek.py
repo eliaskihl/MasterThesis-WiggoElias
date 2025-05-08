@@ -24,20 +24,33 @@ def run_zeek_on_pcap(pcap):
     process = subprocess.Popen(cmd,stdout=temp, stderr=err)
     process.wait()
 
-# Attacks: PortscanAttack
 def run_traffic_generator(traffic_generator, attack):    
     if traffic_generator == 'ID2T':
-        cmd = [
-            "sudo", 
-            "docker", 
-            "exec", 
-            "id2t-container",  
-            "bash", 
-            "-c",
-            f"./id2t -i ../traffic_generators/id2t/input_pcap/smallFlows.pcap -o ../traffic_generators/id2t/output/smallFlows_output.pcap -a {attack} inject.at-timestamp=0"
-        ]
+        print(attack)
+
+        if attack== ('MemcrashedSpooferAttack' or 'DDoSAttack'):
+            cmd = [
+                "sudo", 
+                "docker", 
+                "exec", 
+                "id2t-container",  
+                "bash", 
+                "-c",
+                f"./id2t -i ../traffic_generators/id2t/input_pcap/smallFlows.pcap -o ../traffic_generators/id2t/output/smallFlows_output.pcap -a {attack} inject.at-timestamp=0 attack.duration=10"
+            ]
+        else:
+            cmd = [
+                "sudo", 
+                "docker", 
+                "exec", 
+                "id2t-container",  
+                "bash", 
+                "-c",
+                f"./id2t -i ../traffic_generators/id2t/input_pcap/smallFlows.pcap -o ../traffic_generators/id2t/output/smallFlows_output.pcap -a {attack} inject.at-timestamp=0"
+            ]
         process = subprocess.Popen(cmd)
         process.wait()
+
 
 def delete_zeek_logs():
     files_in_logs = os.listdir('./logs')

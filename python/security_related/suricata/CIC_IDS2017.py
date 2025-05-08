@@ -58,7 +58,6 @@ def process_suricata_logs_CICIDS2017(pcap_file):
     df_suricata['proto'] = df_suricata['proto'].str.lower()
     df_suricata["src_port"] = pd.to_numeric(df_suricata["src_port"], errors="coerce").astype("Int64")
     df_suricata["dest_port"] = pd.to_numeric(df_suricata["dest_port"], errors="coerce").astype("Int64")
-    df_suricata.to_csv("./tmp/df_suricata_alerts.csv")
 
     
     # Using zeek here to extract all the flows from the pcap file 
@@ -92,7 +91,6 @@ def process_suricata_logs_CICIDS2017(pcap_file):
 
     df_zeek_flows = df_zeek_flows[["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"]]
     df_zeek_flows["start_time"] = df_zeek_flows["start_time"].astype(int) - 7200
-    df_zeek_flows.to_csv("./tmp/df_zeek_flows.csv")
 
     df_suricata = pd.merge(df_zeek_flows, df_suricata, how='left', on=['src_ip','src_port','dest_ip','dest_port','proto', 'start_time'],suffixes=('_zeek_flows', '_suricata'))
 

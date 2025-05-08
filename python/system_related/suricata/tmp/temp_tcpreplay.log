@@ -1,8 +1,8 @@
-Actual: 1000 packets (54000 bytes) sent in 0.054005 seconds
-Rated: 999907.4 Bps, 7.99 Mbps, 18516.80 pps
-Flows: 994 flows, 18405.70 fps, 1000 unique flow packets, 0 unique non-flow packets
+Actual: 142610 packets (92165310 bytes) sent in 7.37 seconds
+Rated: 12499943.7 Bps, 99.99 Mbps, 19341.51 pps
+Flows: 1209 flows, 163.97 fps, 142430 unique flow packets, 180 unique non-flow packets
 Statistics for network device: veth_host
-	Successful packets:        1000
+	Successful packets:        142610
 	Failed packets:            0
 	Truncated packets:         0
 	Retried packets (ENOBUFS): 0

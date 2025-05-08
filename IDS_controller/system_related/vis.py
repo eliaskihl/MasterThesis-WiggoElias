@@ -232,7 +232,6 @@ def vis():
     speeds = []     
   
     print("Final:\n",final_df)
-    exit(0)
     
     if not os.path.exists(f"../../img/controller/"):
         os.makedirs(f"../../img/controller")
