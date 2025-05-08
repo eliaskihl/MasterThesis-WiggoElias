@@ -7,6 +7,7 @@ from python.system_related.run_par import run_parallel
 from python.system_related.vis_all import visualize
 from IDS_controller.system_related.run import run_controller
 from IDS_controller.system_related.vis import visualize_controller
+from table_generation import table_generation
 
 import subprocess
 import argparse
@@ -144,10 +145,19 @@ parser.add_argument("-pcap", help="Path to the pcap file (optional for single ru
 parser.add_argument("-traffic_generator", help="Name of the traffic generator (optional for single runs)")
 parser.add_argument("-attack", help="Attack to simulate (optional for single runs)")
 parser.add_argument("-type",help="Choose to viszualize the latency or throughput files, (can be latency or throughput)")
+parser.add_argument("-run_all",help="Run all files before creating the table")
+
 parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments for the script")
 
 args = parser.parse_args()
 tool = args.tool
+if tool == "table":
+    
+    if "run_all" in args.args:
+        table_generation(True)
+    else:
+        table_generation(False)
+
 if tool in ["latency", "parallel", "throughput", "controller"]:
     
     if args.i:

@@ -432,16 +432,7 @@ def update_and_clean_docker_logs():
         command = f"rm -rf {target_path}/*"
 
         result = subprocess.run(
-            ["sudo","docker", "exec", "zeek-container", "sh", "-c", command],
-            check=True,
-            # text=True,
-            # capture_output=True  # Captures both stdout and stderr
-        )
-        
-        # # If the command was successful, print the output
-        # print("Command succeeded!")
-        # print("Output:\n", result.stdout)  # The standard output of the command
-        # print("Error (if any):\n", result.stderr)  # The error output of the command (if any)
+            ["sudo","docker", "exec", "zeek-container", "sh", "-c", command],check=True,)
 
         print(f"Cleaned contents of '{target_path}' inside container zeek-container'.")
 
@@ -461,37 +452,30 @@ def measure_latency():
     roles = {}
     for path in file_paths:
         print(path)
-        # subprocess.run(["sudo", "gzip", "-d", path])
         temp_dict = {}
         try:
             with open_maybe_gzipped(path) as file:
                 for line in file:
-                # 1743092612.165135	logger-1	got hello from manager (72c0fbec-a4fc-5545-8e6d-2b244618b4fa)
-                # 1743092612.165017	manager	got hello from logger-1 (19dd8eaf-8fba-5797-aead-6263755e69cc)
 
                     if line.startswith("#") or not line.strip():
-                        continue  # Skip metadata lines
+                        continue  # Skip commented lines
                     # Fields are seperated by tabs
-                    fields = line.strip().split("\t")  # Fields are tab-separated
+                    fields = line.strip().split("\t") 
 
                     time = fields[0]
                     role = fields[1]
                     message = fields[2]
-                    if "from"  in message:
+                    if "from" in message:
                             
-                        # print("0",message)
                         target_role = message.split("from")[-1]
-                        # print("1",target_role)
                         target_role = target_role.split(" ")[1]
-                        # print("2",target_role)
                         
                         temp_dict[(role,target_role)] = time
         
         except Exception as e:
             print(f"Error reading {path}: {e}")
 
-                
-            
+ 
         #Find the pairs in the dict and take the delta time
         banned = []
         
