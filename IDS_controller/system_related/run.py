@@ -232,7 +232,7 @@ def log_performance(log_file,tcp_proc):
     with open(log_file, "w", newline="") as f:
         # Writes to csv
         writer = csv.writer(f)
-        writer.writerow(["Time","Role", "CPU_Usage", "Memory_Usage", "Upload_Speed", "Download_Speed"])  # CSV header
+        writer.writerow(["Time","Role", "CPU_Usage", "Memory_Usage"])  # CSV header
         
         # Initate a baseline for cpu precentage
         for proc in psutil.process_iter():

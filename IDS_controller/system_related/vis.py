@@ -34,18 +34,9 @@ def crashed_plot(throughput):
     # Save df
     df_tot.to_csv(file,index=False)
 
-    roles = list(crashes.keys())
-    freq = list(crashes.values())
-    data = pd.DataFrame(list(zip(roles,freq)),columns=["role","freq"])
-    
 
-    
-    sns.set_style("whitegrid")
-    sns.barplot(data,x="role",y="freq",palette='Set1')
-    plt.xlabel('')
-    plt.ylabel("Number of shutdowns")
-    plt.title("Number of shutdowns per node")
-    plt.savefig(f"../../img/controller/crashed_nodes_{str(throughput)}.png")
+
+
 
 def latency_plot(throughput):
     
@@ -167,13 +158,10 @@ def calc_mean(df,speed):
     # Return a list of the "Roles"
     list_of_roles = avg_usage["Role"].to_list()
     # For each role get the drop rate
-    
-    list_of_drop_rates_values = []
     list_of_total_packets = []
     list_of_drop_rates_tcpreplay = []
     for role in list_of_roles:
         
-        # drop_file = f"./zeekctl/perf_files/drop_rate_{role}_{speed}.txt"
         total_file = f"./zeekctl/perf_files/total_packets_{role}_{speed}.txt"
         tcp_drop_file = f"./zeekctl/perf_files/tcpreplay_drop_rate_{role}_{speed}.txt" 
         
@@ -194,7 +182,6 @@ def calc_mean(df,speed):
 
         list_of_drop_rates_tcpreplay.append(acc_drop_rate)
 
-    # avg_usage["Drop_Rate"] = list_of_drop_rates_values
     avg_usage["Drop_Rate"] = list_of_drop_rates_tcpreplay
     avg_usage["Total_Packets"] = list_of_total_packets
     
@@ -202,7 +189,6 @@ def calc_mean(df,speed):
 
 def vis():
     speeds = []
-    network_dict = {}
     
     final_df = pd.DataFrame()
     files = glob.glob(f"./zeekctl/perf_files/ids_performance_log*.csv")
@@ -218,7 +204,7 @@ def vis():
         
         df, list_of_roles = calc_mean(df,speed)
         
-        # for speed value get latency and shutdown plots
+        # For speed value get latency and shutdown plots
         crashed_plot(speed)
         latency_plot(speed)
         
@@ -245,23 +231,21 @@ def vis():
        
     # Clear list
     speeds = []     
-  
     print("Final:\n",final_df)
     
     
-    if not os.path.exists(f"../../img/controller/"):
-        os.makedirs(f"../../img/controller")
+    list_of_roles = [role for role in list_of_roles if role != "Unknown"]
+    
     width,height = 8,6
     cpu_names=[]
     mem_names=[]
     drop_names=[]
-    # acc_drop_names=[]
     total_names=[]
     for i in list_of_roles:
+        
         cpu_names.append(f"{i}_CPU_Usage")
         mem_names.append(f"{i}_Memory_Usage")
         drop_names.append(f"{i}_Drop_Rate")
-        # acc_drop_names.append(f"{i}_Actual_Drop_Rate")
         total_names.append(f"{i}_Total_Packets")
 
     # Save csv
@@ -272,7 +256,7 @@ def vis():
     latency_df = pd.read_csv("./df_latency_between_nodes.csv")
     shutdown_df = pd.read_csv("./node_shutdowns.csv")
     final_df = pd.merge(final_df, latency_df, on='Throughput', how='inner') 
-    final_df = pd.merge(final_df,shutdown_df, on='Throughput', how='inner')
+    final_df = pd.merge(final_df, shutdown_df, on='Throughput', how='inner')
     # Clean Unknown role
     final_df = final_df.loc[:, ~final_df.columns.str.contains('Unknown')]
     final_df.to_csv(f"../../tables/controller/syseval.csv")
@@ -303,13 +287,7 @@ def vis():
     plt.savefig(f"../../img/controller/drop_rate.png")
     plt.clf()  # Clear the figure
 
-    # final_df.plot(x="Throughput", y=acc_drop_names, kind="bar", figsize=(width,height),  label=list_of_roles)
-    # plt.title(f"Actual Drop Rate Zeekctl")
-    # plt.ylabel("Drop Rate (%)")
-    # plt.xlabel("Throughput (Mbps)")
-    # print("Saving plot Actual Drop Rate")
-    # plt.savefig(f"../../img/controller/actual_drop_rate.png")
-    # plt.clf()  # Clear the figure
+    
 
     final_df.plot(x="Throughput", y=total_names, kind="bar", figsize=(width,height),  label=list_of_roles)
     plt.title(f"Total Packets Zeekctl")
@@ -318,14 +296,27 @@ def vis():
     print("Saving plot Total Packets")
     plt.savefig(f"../../img/controller/total_packets.png")
     plt.clf()  # Clear the figure
-    # plt.savefig(f"../.../../img/{folder}/total_packets_sent.png")
-    # Network plot
-    #network_plot(network_dict)
+    
+    # Shutdown
+    df = pd.read_csv("./node_shutdowns.csv")
+    roles = df.columns[1:]  # all roles (excluding Throughput)
 
+    for role in roles:
+        plt.plot(df['Throughput'], df[role], marker='o', label=role.replace('Shutdowns_for_', ''))
+
+    plt.xlabel('Throughput')
+    plt.ylabel('Frequency of Shutdowns')
+    plt.title('Shutdown Frequency per Role vs Throughput')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"../../img/controller/nodes_shutdowns.png")
     
 
 
 def visualize_controller():
+    if not os.path.exists(f"../../img/controller/"):
+        os.makedirs(f"../../img/controller")
     # Clean latency file before start
     file = "./df_latency_between_nodes.csv"
     open(file, "w").close()
