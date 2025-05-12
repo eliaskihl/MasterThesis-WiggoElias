@@ -53,7 +53,7 @@ def sort_directory(path, by='name', descending=False):
 def natural_sort(file_list):
     return sorted(file_list, key=lambda s: [int(t) if t.isdigit() else t.lower()
                                             for t in re.split(r'(\d+)', s)])
-def vis(folder):
+def vis(folder, num_cores):
     x_value = "Throughput"
     if folder == "latency":
         x_value = "Latency"
@@ -63,6 +63,7 @@ def vis(folder):
     mems = []
     drop_rates = []
     packet_analysis_rate = []
+    total_packets_list = []
     # Create empty dataframe
     dfs = {}
     print("Current Working Directory:", os.getcwd())
@@ -75,7 +76,7 @@ def vis(folder):
             speed = (int(file.split("_")[-1].split(".")[0]))
             speeds.append(speed)
             cpu, mem = calc_mean(file)
-            cpus.append(cpu)
+            cpus.append(cpu/num_cores)
             mems.append(mem)
             # TODO: Check if file exists before reading
             with open(f"./{folder}/{name}/perf_files/drop_rate_{speed}.txt", "r") as f:
@@ -83,14 +84,17 @@ def vis(folder):
                drop_rates.append(drop_rate)
             with open(f"./{folder}/{name}/perf_files/total_packets_{speed}.txt", "r") as f:
                total_packets = float(f.read())
+               total_packets_list.append(total_packets)
                packet_analysis_rate.append(total_packets/60)
+
         dfs[name] = pd.DataFrame({x_value:speeds, "CPU_Usage":cpus, "Memory_Usage":mems, "Drop_Rate":drop_rates, 
-                                  "Packet_Analysis_Rate":packet_analysis_rate, "Total_Packets_Sent":total_packets})
+                                  "Packet_Analysis_Rate":packet_analysis_rate, "Total_Packets_Sent":total_packets_list})
         # Clear
         speeds = []
         cpus = []
         mems = []
         drop_rates = []
+        total_packets_list = []
         packet_analysis_rate = []
 
     df_sur = dfs["suricata"]
@@ -110,7 +114,7 @@ def vis(folder):
                        "Packet_Analysis_Rate":"Packet_Analysis_Rate_zeek", "Total_Packets_Sent":"Total_Packets_Sent_zeek"}, inplace=True)
     print(df)
     # Save dataframe in a folder
-    print("testt")
+    
 
     if not os.path.exists(f"../../tables/{folder}/"):
         os.makedirs(f"../../tables/{folder}/")
@@ -165,11 +169,11 @@ def vis(folder):
     plt.savefig(f"../../img/{folder}/total_packets_sent.png")
     plt.clf()  # Clear the figure
 
-def visualize(folder):
+def visualize(folder,num_cores):
     # Folder is the type, throughput or latency
     start = time.time()
 
-    vis(folder)
+    vis(folder,int(num_cores))
     end = time.time()
     print("Runtime:",end-start)
 

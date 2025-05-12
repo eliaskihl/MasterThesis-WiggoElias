@@ -180,7 +180,7 @@ parser.add_argument("-traffic_generator", help="Name of the traffic generator (o
 parser.add_argument("-attack", help="Attack to simulate (optional for single runs)")
 parser.add_argument("-type",help="Choose to viszualize the latency or throughput files, (can be latency or throughput)")
 parser.add_argument("-run_all",help="Run all files before creating the table")
-
+parser.add_argument("-num_cores",help="Run all files before creating the table")
 parser.add_argument("args", nargs=argparse.REMAINDER, help="Additional arguments for the script")
 
 args = parser.parse_args()
@@ -219,7 +219,7 @@ if tool in ["visualize", "visualize_controller"]:
     try:
         with change_dir(TOOLS[tool]["dir"]):
             if tool == "visualize":
-                visualize(args.type)
+                visualize(args.type, args.num_cores)
             elif tool == "visualize_controller":
                 visualize_controller()
     except Exception as e:
