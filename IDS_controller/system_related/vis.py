@@ -1,13 +1,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import glob
 import os
 import re
-import argparse
 import networkx as nx
-import pickle
-import seaborn as sns
 
 def crashed_plot(throughput):
     with open(f"./zeekctl/perf_files/count_crashed_{str(throughput)}.txt", "rb") as file:
@@ -61,8 +59,8 @@ def latency_plot(throughput):
         G.add_edge(src, dst, weight=latency)
         
         
-        col_name = f"Latency_{src}_{dst}"
-        row[col_name] = latency
+        col_name = f"Latency(ms)_{src}_{dst}"
+        row[col_name] = latency*1000 # from s to ms
         # print(src, dst, latency)
         
    
@@ -311,8 +309,24 @@ def vis():
     plt.grid(True)
     plt.tight_layout()
     plt.savefig(f"../../img/controller/nodes_shutdowns.png")
-    
+    plt.clf()  # Clear the figure
 
+    # Latencies Overview
+    df = pd.read_csv("./df_latency_between_nodes.csv")
+    roles = df.columns[1:]  # all roles (excluding Throughput)
+    colors = cm.get_cmap('tab20', len(roles) - 1)  # One color per line
+
+    for idx,role in enumerate(roles):
+        plt.plot(df['Throughput'], df[role], marker='o', label=role.replace('Latency(ms)_', ''), color=colors(idx))
+
+    plt.xlabel('Throughput')
+    plt.ylabel('Latency (ms)')
+    plt.title('Latencies between nodes (max is 1000)')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"../../img/controller/latency_overview.png")
+    plt.clf()  # Clear the figure
 
 def visualize_controller():
     if not os.path.exists(f"../../img/controller/"):
