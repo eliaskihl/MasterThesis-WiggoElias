@@ -57,6 +57,8 @@ def vis(folder, num_cores):
     x_value = "Throughput"
     if folder == "latency":
         x_value = "Latency"
+    elif folder == "throughput":
+        folder = "regular"
    
     speeds = []
     cpus = []
