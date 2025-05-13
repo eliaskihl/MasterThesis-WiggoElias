@@ -425,7 +425,7 @@ def run_throughput(interface, first=10, last=60, step=10, loop=10):
         loop = start_loop
         # latency_eval(ids_name,10,512,interface)
         for i in range(first,last,step):
-            run_start = time.time()
+            # run_start = time.time()
             # Scale loop
             print("test",loop)
             loop = loop + int(i/10)
@@ -433,8 +433,7 @@ def run_throughput(interface, first=10, last=60, step=10, loop=10):
             print("Running with speed:", i)
             restart_interface(interface) # Restart the interface between runs so snort can shutdown
             run(ids_name, loop, i, host_interface)
-            run_end = time.time()
-            runtimes[ids_name].append(run_end-run_start)
+            # run_end = time.time()
 
     
     # visualize()

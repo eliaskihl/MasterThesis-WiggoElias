@@ -272,8 +272,7 @@ def log_performance(log_file,tcp_proc):
             #psutil.process_iter.cache_clear()
     print("Logging complete")
 
-def wait_for_zeekctl():
-    time.sleep(20)
+
 
 def extract_tcpreplay_drop_rate(speed,dict_for_drop_rates):
     # Recorded total packets according to TCPreplay
@@ -296,6 +295,7 @@ def extract_tcpreplay_drop_rate(speed,dict_for_drop_rates):
 
 
 def run(interface, speed, loop):
+    
     tries = 0
     while True:
         if not os.path.exists(f"./zeekctl/perf_files"):
@@ -321,7 +321,7 @@ def run(interface, speed, loop):
             # command = ["sudo", zeekctl_path, "deploy"]
             ids_proc = subprocess.Popen(command, stdout=temp, stderr=err)
         # Wait for start of zeekctl
-        wait_for_zeekctl()
+        wait_for_start()
         # Start tcp replay
         print("Starting tcp replay...")
         with open(f"./zeekctl/tmp/temp_tcpreplay.log", "w") as temp, \
@@ -371,13 +371,23 @@ def run(interface, speed, loop):
         # End / join thread
         print("Terminating monitor thread")
         monitor_thread.join()
-        time.sleep(2)
+        time.sleep(5)
+        update_and_clean_docker_logs()
+        wait_for_docker_logs()
+        time.sleep(5)
+        # ok_latenices = True
+        # latencies = measure_latency()
+        # print("lat:",latencies)
+        # for key,item in latencies.items():
+        #     # Sometimes latency extraction goes wrong, then rerun. 
+        #     if (item*1000) > 1000 and tries < 7:
+        #         ok_latenices = False
+        #         print("Not OK latency")
+        #         break
         if check_tcpreplay_throughput("zeekctl",speed): # If not a match then restart 
-            
             # Wait for values to be updated
-            time.sleep(10)
-            # Two methods of extracting the drop rate, which one is the best?
-            update_and_clean_docker_logs()
+            
+            # Extract drop rate           
             dict_for_drop_rates = extract_drop_rate_zeekctl() # Return a dictionary with all roles and their respective total packets and dropped packet as a tuple 
             # Write drop rate to file
             total_packets_var = 0
@@ -395,17 +405,30 @@ def run(interface, speed, loop):
         else:
             tries+=1
             print("Number of tries:",tries)
-            update_and_clean_docker_logs()
             remove_logs()
             restart_interface(interface.replace("_host",'')) 
         
-def check_if_same_interface(): # TODO: Check that the same interface is used in "run" as defined in workers
-    pass
 
-def wait_for_start(): # TODO: Based on the scale of the network should wait that time
-    pass
+def wait_for_start():
+    while True:
+        # Open and read each log file
+        with open(f"./zeekctl/tmp/temp.log", 'r') as file:
+   
+            status = "starting workers ..." in file.read()
+            
+            # If all conditions are met, exit the loop
+            if status:
+                break
+        
+        time.sleep(2)  # Sleep before checking again
     
-
+def wait_for_docker_logs():
+    directory = "./../../python/ids_configuration/zeek/"
+ 
+    while not os.listdir(directory):
+            print("No files found in the directory.")
+            time.sleep(1)
+    
 def update_and_clean_docker_logs():
     # Local directory to store logs from the Docker container
     local_config_file = "./../../python/ids_configuration/zeek/"
@@ -599,6 +622,7 @@ def run_controller(interface, first=10, last=60, step=10, loop=10, worker=1,mana
         run(host_interface,i,loop)
         crashed_nodes = count_crashed_nodes()
         latencies = measure_latency()
+        
 
         with open(f"./zeekctl/perf_files/count_crashed_{i}.txt", "w") as f: 
                 f.write(str(crashed_nodes)) 
