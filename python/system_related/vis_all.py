@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import glob
 import os
 import time
-import argparse
+import psutil
 import re
 
 def calc_mean(ids_performance_log):
@@ -174,7 +174,9 @@ def vis(folder, num_cores):
 def visualize(folder,num_cores):
     # Folder is the type, throughput or latency
     start = time.time()
-
+    if not num_cores:
+        num_cores = psutil.cpu_count(logical=True)
+    print(f"Running on {num_cores} cores")
     vis(folder,int(num_cores))
     end = time.time()
     print("Runtime:",end-start)
