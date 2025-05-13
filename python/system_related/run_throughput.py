@@ -410,9 +410,11 @@ def run_throughput(interface, first=10, last=60, step=10, loop=10):
     first = int(first)
     last = int(last)
     step = int(step)
+    if not loop:
+        loop = 10
     loop = int(loop)
-
-    
+    start_loop = loop
+    runtimes = {}
     restart_interface(interface) # This will create an interface link between interface_name_host and interface_name_docker
     host_interface = (interface+"_host")
     if not is_interface_valid(host_interface): # Check if interface is valid and exists
@@ -420,11 +422,20 @@ def run_throughput(interface, first=10, last=60, step=10, loop=10):
     
     
     for ids_name in ["suricata","zeek","snort"]:
+        loop = start_loop
         # latency_eval(ids_name,10,512,interface)
         for i in range(first,last,step):
+            run_start = time.time()
+            # Scale loop
+            print("test",loop)
+            loop = loop + int(i/10)
+            print("Running with loop:",int(loop))
             print("Running with speed:", i)
             restart_interface(interface) # Restart the interface between runs so snort can shutdown
             run(ids_name, loop, i, host_interface)
+            run_end = time.time()
+            runtimes[ids_name].append(run_end-run_start)
+
     
     # visualize()
     runtime = time.time()-start
