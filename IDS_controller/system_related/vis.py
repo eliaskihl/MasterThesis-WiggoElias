@@ -40,10 +40,7 @@ def latency_plot(throughput):
     
     with open(f"./zeekctl/perf_files/latencies_{str(throughput)}.txt", "rb") as file:
         latencies = eval(file.read())
-    # Check if any latencies are obscure > 1000
-    for key,item in latencies.items():
-        if item > 1000:
-            latencies[key] = 1000 
+   
     # Extract to dataframe
     # Flatten to single-row DataFrame
     df = pd.DataFrame()
@@ -62,9 +59,14 @@ def latency_plot(throughput):
     for (src, dst), latency in latencies.items():
         G.add_edge(src, dst, weight=latency)
         
-        
+        lat = 1000*latency
+        if lat > 1000:
+            lat = 1000 
         col_name = f"Latency(ms)_{src}_{dst}"
-        row[col_name] = latency*1000 # from s to ms
+        row[col_name] = lat # from s to ms
+         # Check if any latencies are obscure > 1000
+    
+        
         # print(src, dst, latency)
         
    
