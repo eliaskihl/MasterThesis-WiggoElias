@@ -60,10 +60,9 @@ def latency_plot(throughput):
         G.add_edge(src, dst, weight=latency)
         
         lat = 1000*latency
-        if lat > 1000:
-            lat = 1000 
-        col_name = f"Latency(ms)_{src}_{dst}"
-        row[col_name] = lat # from s to ms
+        if lat < 1000:
+            col_name = f"Latency(ms)_{src}_{dst}"
+            row[col_name] = lat # from s to ms
          # Check if any latencies are obscure > 1000
     
         
