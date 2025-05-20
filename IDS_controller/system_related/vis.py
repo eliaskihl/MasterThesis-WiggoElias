@@ -317,21 +317,42 @@ def vis():
     plt.clf()  # Clear the figure
 
     # Latencies Overview
+    # Do for each role 
+    
+    # Load data
+    # Load data
     df = pd.read_csv("./df_latency_between_nodes.csv")
-    roles = df.columns[1:]  # all roles (excluding Throughput)
-    colors = cm.get_cmap('tab20', len(roles) - 1)  # One color per line
 
-    for idx,role in enumerate(roles):
-        plt.plot(df['Throughput'], df[role], marker='o', label=role.replace('Latency(ms)_', ''), color=colors(idx))
+    # Extract all latency columns
+    latency_cols = [col for col in df.columns if col.startswith('Latency(ms)_')]
 
-    plt.xlabel('Throughput')
-    plt.ylabel('Latency (ms)')
-    plt.title('Latencies between nodes (max is 1000)')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(f"../../img/controller/latency_overview.png")
-    plt.clf()  # Clear the figure
+    # Get unique source roles (e.g., 'logger-1', 'manager', etc.)
+    source_roles = set(col.split('_')[1] for col in latency_cols)
+
+    # Plot for each source role
+    for role1 in source_roles:
+        # Find columns where this role is the source
+        role_cols = [col for col in latency_cols if col.startswith(f'Latency(ms)_{role1}_')]
+        if not role_cols:
+            continue
+
+        # Clean labels: extract only the target part
+        cleaned_labels = [col.split(f'Latency(ms)_{role1}_')[1] for col in role_cols]
+
+        plt.figure(figsize=(10, 6))
+        for col, label in zip(role_cols, cleaned_labels):
+            plt.plot(df['Throughput'], df[col], marker='o', label=label)
+
+        print(f"Saving latency plot for {role1}")
+        plt.xlabel('Throughput')
+        plt.ylabel('Latency (ms)')
+        plt.title(f'Latencies from {role1} (max is 1000)')
+        plt.legend(title='Target')
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"../../img/controller/latency_overview_{role1}.png")
+        plt.clf()
+
 
 def visualize_controller():
     if not os.path.exists(f"../../img/controller/"):
