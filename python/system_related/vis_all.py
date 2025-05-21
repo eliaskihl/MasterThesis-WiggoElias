@@ -171,6 +171,23 @@ def vis(folder, num_cores):
     plt.savefig(f"../../img/{folder}/total_packets_sent.png")
     plt.clf()  # Clear the figure
 
+    # Drop rate vs CPU
+    dfs = [df_sur,df_snort,df_zeek]
+    names = ["Suricata", "Snort", "Zeek"]
+    for df_i,name in zip(dfs,names):
+        # Plot with dual Y-axes
+        ax = df_i.plot(x=x_value, y=["CPU_Usage"], label=['CPU Usage (%)'], color='red')
+        df_i.plot(x=x_value, y=["Drop_Rate"], secondary_y=True, ax=ax, label=['Drop Rate (%)'], color='blue')
+
+        # Add titles and labels
+        ax.set_ylabel('CPU Usage (%)')
+        ax.right_ax.set_ylabel('Drop rate')
+        plt.title(f'CPU vs Drop rate for {name}')
+        ax.figure.tight_layout()
+        plt.savefig(f"../../img/{folder}/{name}_cpu_vs_drop_rate.png")
+        plt.clf()  # Clear the figure
+
+
 def visualize(folder,num_cores):
     # Folder is the type, throughput or latency
     start = time.time()
