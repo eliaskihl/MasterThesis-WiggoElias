@@ -177,7 +177,7 @@ def visualize(folder,num_cores):
     if not num_cores:
         num_cores = psutil.cpu_count(logical=True)
     print(f"Running on {num_cores} cores")
-    vis(folder,int(num_cores))
+    vis(folder,1)
     end = time.time()
     print("Runtime:",end-start)
 

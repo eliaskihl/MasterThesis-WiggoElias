@@ -33,11 +33,11 @@ def check_zeek_interface(interface):
                 file.writelines(f"interface={interface}")        
          
 
-def check_tcpreplay_throughput(ids_name,target_speed):
+def check_tcpreplay_throughput(name,target_speed):
     threshold_percentage = 5  
     lower_bound = target_speed * (1 - threshold_percentage / 100)
     upper_bound = target_speed * (1 + threshold_percentage / 100)
-    log = f"./{ids_name}/tmp/temp_tcpreplay.log"
+    log = f"./{name}/tmp/temp_tcpreplay.log"
     with open(log, "r") as file:
         for line in file:
             #Rated: 4999998.1 Bps, 39.99 Mbps, 7736.63 pps
@@ -137,6 +137,7 @@ def log_performance(log_file, process_name,tcp_proc):
                     total_mem += proc.info["memory_info"].rss
 
             tot_mem = psutil.virtual_memory().total
+
             memory_percentage = (total_mem / tot_mem) * 100
                     
             writer.writerow([time.strftime("%Y-%m-%d %H:%M:%S"), total_cpu, memory_percentage])
@@ -176,7 +177,7 @@ def run(ids_name, loop, speed, interface):
                 "suricata-container", 
                 "bash", 
                 "-c",  
-                f"cd .. && cd .. && cd usr/local/bin && ./suricata -i {interface} -c ../etc/suricata/suricata.yaml"  
+                f"cd .. && cd .. && cd usr/local/bin && taskset -c 0 ./suricata -i {interface} -c ../etc/suricata/suricata.yaml"  
             ]
             # command = ["sudo", suricata_path, "-i", interface, "-l", "./suricata/logs"]
             ids_proc = subprocess.Popen(cmd, stdout=temp, stderr=err) 
