@@ -10,6 +10,10 @@ import networkx as nx
 def crashed_plot(throughput):
     with open(f"./zeekctl/perf_files/count_crashed_{str(throughput)}.txt", "rb") as file:
         crashes = eval(file.read())
+
+    if crashes == None:
+        print(f"There are no values recorded in file: latencies_{str(throughput)}.txt")
+
     df = pd.DataFrame()
     file = "./node_shutdowns.csv"
     if os.path.exists(file) and os.path.getsize(file) > 0:
@@ -37,9 +41,12 @@ def crashed_plot(throughput):
 
 
 def latency_plot(throughput):
-    
+    latencies = {}
     with open(f"./zeekctl/perf_files/latencies_{str(throughput)}.txt", "rb") as file:
         latencies = eval(file.read())
+    
+    if latencies == None:
+        print(f"There are no values recorded in file: latencies_{str(throughput)}.txt")
    
     # Extract to dataframe
     # Flatten to single-row DataFrame
@@ -319,7 +326,6 @@ def vis():
     # Latencies Overview
     # Do for each role 
     
-    # Load data
     # Load data
     df = pd.read_csv("./df_latency_between_nodes.csv")
 
