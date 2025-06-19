@@ -1,7 +1,3 @@
-venv
-.venv
-api.py
-setup.py
 img
 /*/RUN.md
 *__pycache__
