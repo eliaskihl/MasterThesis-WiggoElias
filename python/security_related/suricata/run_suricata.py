@@ -17,7 +17,7 @@ def run_suricata_on_pcap(pcap):
         "suricata-container", 
         "bash", 
         "-c",  
-        f"cd .. && cd .. && cd usr/local/bin && ./suricata -r ../../{pcap} -c ../etc/suricata/suricata.yaml -l ../../../logs"  
+        f"cd /usr/local/bin && taskset -c 0 ./suricata -r /{pcap} -c /usr/local/etc/suricata/suricata.yaml -l /logs"
     ]
 
     process = subprocess.Popen(cmd,stdout=temp, stderr=err)

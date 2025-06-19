@@ -45,7 +45,6 @@ def process_zeek_logs_ID2T():
     df_zeek["start_time"] = df_zeek["start_time"].astype(int)
     df_zeek = df_zeek.drop_duplicates(subset=["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"])
 
-    # This part prepares the ground truth based on the output of ID2T and flows taken from zeek's conn.log
     xml_file = '../traffic_generators/id2t/output/smallFlows_output_labels.xml'
     tree = ET.parse(xml_file)
     root = tree.getroot()

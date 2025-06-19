@@ -2,50 +2,53 @@ import os
 import pandas as pd
 import subprocess
 from datetime import datetime
+from pathlib import Path
 
 def process_suricata_logs_BOTIOT(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
-    
-    pcap_to_gt_map = {
-    "../datasets/BOT-IOT/pcap/DDoS/DDoS_HTTP/DDoS_HTTP.pcap": "../datasets/BOT-IOT/ground_truth/DDoS_HTTP.csv",
-    "../datasets/BOT-IOT/pcap/DDoS/DDoS_UDP/DDoS_UDP.pcap": "../datasets/BOT-IOT/ground_truth/DDoS_UDP.csv",
-    "../datasets/BOT-IOT/pcap/DDoS/DDoS_TCP/DDoS_TCP.pcap": "../datasets/BOT-IOT/ground_truth/DDoS_TCP.csv",
 
-    "../datasets/BOT-IOT/pcap/DoS/DoS_HTTP/DoS_HTTP.pcap": "../datasets/BOT-IOT/ground_truth/DoS_HTTP.csv",
-    "../datasets/BOT-IOT/pcap/DoS/DoS_UDP/DoS_UDP.pcap": "../datasets/BOT-IOT/ground_truth/DoS_UDP.csv",
-    "../datasets/BOT-IOT/pcap/DoS/DoS_TCP/DoS_TCP.pcap": "../datasets/BOT-IOT/ground_truth/DoS_TCP.csv",
-    
-    "../datasets/BOT-IOT/pcap/Scan/Service/Service.pcap": "../datasets/BOT-IOT/ground_truth/Service_Scan.csv",
-    "../datasets/BOT-IOT/pcap/Scan/OS/OS.pcap": "../datasets/BOT-IOT/ground_truth/OS_Scan.csv",
-
-    "../datasets/BOT-IOT/pcap/Theft/Data_Exfiltration/Data_Exfiltration.pcap": "../datasets/BOT-IOT/ground_truth/Data_exfiltration.csv",
-    "../datasets/BOT-IOT/pcap/Theft/Keylogging/keylogging.pcap": "../datasets/BOT-IOT/ground_truth/Keylogging.csv",
+    pcap_folder_to_gt_map = {
+        "../datasets/BOT-IOT/pcap/DDoS/DDoS_HTTP": "../datasets/BOT-IOT/ground_truth/DDoS_HTTP.csv",
+        "../datasets/BOT-IOT/pcap/DDoS/DDoS_UDP": "../datasets/BOT-IOT/ground_truth/DDoS_UDP.csv",
+        "../datasets/BOT-IOT/pcap/DDoS/DDoS_TCP": "../datasets/BOT-IOT/ground_truth/DDoS_TCP.csv",
+        "../datasets/BOT-IOT/pcap/DoS/DoS_HTTP": "../datasets/BOT-IOT/ground_truth/DoS_HTTP.csv",
+        "../datasets/BOT-IOT/pcap/DoS/DoS_UDP": "../datasets/BOT-IOT/ground_truth/DoS_UDP.csv",
+        "../datasets/BOT-IOT/pcap/DoS/DoS_TCP": "../datasets/BOT-IOT/ground_truth/DoS_TCP.csv",
+        "../datasets/BOT-IOT/pcap/Scan/Service": "../datasets/BOT-IOT/ground_truth/Service_Scan.csv",
+        "../datasets/BOT-IOT/pcap/Scan/OS/1": "../datasets/BOT-IOT/ground_truth/OS_Scan.csv",
+        "../datasets/BOT-IOT/pcap/Scan/OS/2": "../datasets/BOT-IOT/ground_truth/OS_Scan.csv",
+        "../datasets/BOT-IOT/pcap/Scan/OS/3": "../datasets/BOT-IOT/ground_truth/OS_Scan.csv",
+        "../datasets/BOT-IOT/pcap/Scan/OS/4": "../datasets/BOT-IOT/ground_truth/OS_Scan.csv",
+        "../datasets/BOT-IOT/pcap/Theft/Data_Exfiltration": "../datasets/BOT-IOT/ground_truth/Data_exfiltration.csv",
+        "../datasets/BOT-IOT/pcap/Theft/Keylogging": "../datasets/BOT-IOT/ground_truth/Keylogging.csv",
     }
 
-    gt_path = pcap_to_gt_map.get(pcap_file) 
+    pcap_path = Path(pcap_file).resolve()
+
+    gt_path = None
+    for folder, gt in pcap_folder_to_gt_map.items():
+        folder_path = Path(folder).resolve()
+        if folder_path in pcap_path.parents: 
+            gt_path = gt
+            break
+
     if gt_path:
-        df_gt = pd.read_csv(gt_path, delimiter=';')  
+        df_gt = pd.read_csv(gt_path)  
     else:
         print(f"No ground truth found for PCAP: {pcap_file}")
  
-    
-    column_mapping = {
-    "saddr": "src_ip",
-    "sport": "src_port",
-    "daddr": "dest_ip",
-    "dport": "dest_port",
-    "stime" : "start_time",
-    "attack": "flow_alerted",
-    }
+    df_gt.rename(columns={
+        "saddr": "src_ip",
+        "sport": "src_port",
+        "daddr": "dest_ip",
+        "dport": "dest_port",
+        "stime" : "start_time",
+        "attack": "flow_alerted",
+    }, inplace=True)
+    df_gt["src_port"] = pd.to_numeric(df_gt["src_port"], errors='coerce').astype("Int64")
+    df_gt["dest_port"] = pd.to_numeric(df_gt["dest_port"], errors='coerce').astype("Int64")
+    df_gt["start_time"] = pd.to_numeric(df_gt["start_time"], errors='coerce').astype(int)
 
-    df_gt.rename(columns=column_mapping, inplace=True)
-    df_gt = df_gt[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'flow_alerted']]
-    df_gt['start_time'] = df_gt['start_time'].astype(str).str.split('.').str[0].astype(int)
-
-    df_gt['flow_alerted'] = df_gt['flow_alerted'].replace({0: False, 1: True})
-
-    df_gt['src_port'] = pd.to_numeric(df_gt['src_port'], errors='coerce').astype('Int64')
-    df_gt['dest_port'] = pd.to_numeric(df_gt['dest_port'], errors='coerce').astype('Int64')
 
     log_file = './logs/eve.json'
     if not os.path.exists(log_file):
@@ -64,7 +67,6 @@ def process_suricata_logs_BOTIOT(pcap_file):
     df_suricata["src_port"] = pd.to_numeric(df_suricata["src_port"], errors="coerce").astype("Int64")
     df_suricata["dest_port"] = pd.to_numeric(df_suricata["dest_port"], errors="coerce").astype("Int64")
 
-    # Using zeek here to extract all the flows from the pcap file 
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
     cmd = [
@@ -95,7 +97,6 @@ def process_suricata_logs_BOTIOT(pcap_file):
 
     df_zeek_flows = df_zeek_flows[["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"]]
     df_zeek_flows["start_time"] = df_zeek_flows["start_time"].astype(int)
-
     df_suricata = pd.merge(df_zeek_flows, df_suricata, how='left', on=['src_ip','src_port','dest_ip','dest_port','proto', 'start_time'],suffixes=('_zeek_flows', '_suricata'))
 
     df_merged = pd.merge(df_gt, df_suricata, how='inner', on=['src_ip', 'dest_ip', 'src_port', 'dest_port', 'proto', 'start_time'],suffixes=('_gt', '_suricata'))

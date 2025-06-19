@@ -7,13 +7,30 @@ def process_snort_logs_CICIDS2017(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
     
     pcap_to_gt_map = {
-    "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_small.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
-
+  "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours_00000_20170703135558.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours_00001_20170703143352.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours_00002_20170703145005.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours_00003_20170703180220.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+  
+  "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_00000_20170704135332.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_00001_20170704142614.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_00002_20170704144719.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_00003_20170704182950.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+  
+  "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours_00000_20170705134242.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours_00001_20170705135921.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours_00002_20170705154341.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours_00003_20170705164151.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+  
+  "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours_00000_20170706135858.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours_00001_20170706141854.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours_00002_20170706163710.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours_00003_20170706193716.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+  
+  "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours_00000_20170707135939.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours_00001_20170707142525.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours_00002_20170707160709.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours_00003_20170707201008.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv"
 }
 
     gt_path = pcap_to_gt_map.get(pcap_file) 
@@ -49,29 +66,24 @@ def process_snort_logs_CICIDS2017(pcap_file):
     
     column_names = ["timestamp", "pkt_num", "proto", "pkt_gen", "pkt_len", "dir", "src_ap", "dst_ap", "rule", "action", "msg", "class", "start_time"]
 
-    # Load the Snort alert CSV file
     df_snort = pd.read_csv(log_file, names=column_names, header=None)
 
-    # Rename 'action' to 'flow_alerted' and set it to True
     df_snort.rename(columns={'action': 'flow_alerted'}, inplace=True)
-    df_snort['flow_alerted'] = True  # Set all values in flow_alerted to True
+    df_snort['flow_alerted'] = True  
 
-    # Split 'src_ap' and 'dst_ap' into IP and Port
     df_snort[['src_ip', 'src_port']] = df_snort['src_ap'].str.split(':', n=1, expand=True)
     df_snort[['dest_ip', 'dest_port']] = df_snort['dst_ap'].str.split(':', n=1, expand=True)
 
-    # Convert ports to integers for consistency
     df_snort['src_port'] = pd.to_numeric(df_snort['src_port'], errors='coerce').astype("Int64")
     df_snort['dest_port'] = pd.to_numeric(df_snort['dest_port'], errors='coerce').astype("Int64")
     df_snort['src_ip'] = df_snort['src_ip'].str.strip()
     df_snort['dest_ip'] = df_snort['dest_ip'].str.strip()
     df_snort['proto'] = df_snort['proto'].str.strip().str.lower()
 
-    # Keep only the necessary columns
-    df_snort = df_snort[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'flow_alerted']]  # Keep only necessary columns
+    df_snort = df_snort[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'flow_alerted']] 
     df_snort = df_snort.drop_duplicates(subset=["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"])
+    df_snort['start_time'] = pd.to_numeric(df_snort['start_time'], errors='coerce').astype('Int64')
 
-    # Using zeek here to extract all the flows from the pcap file since snort only logs alerts and not also benign flows
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
     cmd = [
@@ -123,5 +135,6 @@ def process_snort_logs_CICIDS2017(pcap_file):
     tot_false_pos += len(df_fp)
     tot_false_neg += len(df_fn)
     tot_true_neg += len(df_tn)
+
 
     return(tot_true_pos, tot_false_pos,tot_false_neg,tot_true_neg, False)

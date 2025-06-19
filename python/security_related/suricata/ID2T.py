@@ -26,7 +26,6 @@ def process_suricata_logs_ID2T():
     df_suricata["dest_port"] = pd.to_numeric(df_suricata["dest_port"], errors="coerce").astype("Int64")
     df_suricata = df_suricata.drop_duplicates(subset=["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"])
 
-# This part prepares the ground truth based on the output of ID2T and flows taken from zeek's conn.log
     xml_file = '../traffic_generators/id2t/output/smallFlows_output_labels.xml'
     tree = ET.parse(xml_file)
     root = tree.getroot()

@@ -22,7 +22,6 @@ def run_snort_on_pcap(pcap):
     process.wait()
 
 
-    # Set permissions regardless of snort success
     cmd_chmod = [
         "sudo", "docker", "exec", "snort-container", "bash", "-c",
         "chmod a+r ../logs/alert_csv.txt"
@@ -120,7 +119,6 @@ def run_snort_dataset(dataset, pcap):
 
     run_snort_on_pcap(path_to_pcap)
 
-    # Call appropriate log parser
     if dataset == "UNSW-NB15":
         tp, fp, fn, tn, noAlerts = process_snort_logs_UNSWNB15(path_to_pcap)
     elif dataset == "TII-SSRC-23":

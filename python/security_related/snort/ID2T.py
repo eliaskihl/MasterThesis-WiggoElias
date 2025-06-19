@@ -15,31 +15,24 @@ def process_snort_logs_ID2T():
     
     column_names = ["timestamp", "pkt_num", "proto", "pkt_gen", "pkt_len", "dir", "src_ap", "dst_ap", "rule", "action", "msg", "class", "start_time"]
 
-    # Load the Snort alert CSV file
     df_snort = pd.read_csv(log_file, names=column_names, header=None)
     
-    # Split 'src_ap' and 'dst_ap' into IP and Port (specific to snort)
     df_snort[['src_ip', 'src_port']] = df_snort['src_ap'].str.split(':', n=1, expand=True)
     df_snort[['dest_ip', 'dest_port']] = df_snort['dst_ap'].str.split(':', n=1, expand=True)
     df_snort['src_ip'] = df_snort['src_ip'].str.strip()
     df_snort['dest_ip'] = df_snort['dest_ip'].str.strip()
     df_snort['proto'] = df_snort['proto'].str.strip().str.lower()
     
-    # Rename 'action' to 'flow_alerted' and set it to True
     df_snort.rename(columns={'action': 'flow_alerted'}, inplace=True)
-    df_snort['flow_alerted'] = True  # Set all values in flow_alerted to True
+    df_snort['flow_alerted'] = True 
 
-    # Convert ports to integers for consistency
     df_snort['src_port'] = pd.to_numeric(df_snort['src_port'], errors='coerce').astype("Int64")
     df_snort['dest_port'] = pd.to_numeric(df_snort['dest_port'], errors='coerce').astype("Int64")
 
-    # Keep only the necessary columns
     df_snort = df_snort[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'flow_alerted']]
 
-    # Drop duplicates to get alerts for flows instead of individual packets
     df_snort = df_snort.drop_duplicates(subset=["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"])
 
-    # This part prepares the ground truth based on the output of ID2T and flows taken from zeek's conn.log
     xml_file = '../traffic_generators/id2t/output/smallFlows_output_labels.xml'
     tree = ET.parse(xml_file)
     root = tree.getroot()
@@ -59,7 +52,7 @@ def process_snort_logs_ID2T():
         "zeek-container", 
         "bash", 
         "-c",
-        f"cd logs && zeek -C -r ../{id2t_pcap}"#../usr/local/zeek/share/zeek/base/protocols/conn" 
+        f"cd logs && zeek -C -r ../{id2t_pcap}"
     ]
 
     process = subprocess.Popen(cmd,stdout=temp, stderr=err)

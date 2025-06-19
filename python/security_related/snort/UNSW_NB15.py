@@ -1,20 +1,32 @@
 import pandas as pd
 import os
 import subprocess
+from pathlib import Path
+
 
 def process_snort_logs_UNSWNB15(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
 
-    pcap_to_gt_map = {
-    "../datasets/UNSW-NB15/pcap/pcaps_22-1-2015/pcaps_22-1-2015.pcap": "../datasets/UNSW-NB15/ground_truth/22-1-2015.csv",
-    "../datasets/UNSW-NB15/pcap/pcaps_17-2-2015/pcaps_17-2-2015.pcap": "../datasets/UNSW-NB15/ground_truth/17-2-2015.csv",
-}
-    gt_path = pcap_to_gt_map.get(pcap_file)  
+    pcap_folder_to_gt_map = {
+        "../datasets/UNSW-NB15/pcap/pcaps_22-1-2015": "../datasets/UNSW-NB15/ground_truth/22-1-2015.csv",
+        "../datasets/UNSW-NB15/pcap/pcaps_17-2-2015": "../datasets/UNSW-NB15/ground_truth/17-2-2015.csv",
+    }
+
+    pcap_path = Path(pcap_file).resolve()
+
+    gt_path = None
+    for folder, gt in pcap_folder_to_gt_map.items():
+        folder_path = Path(folder).resolve()
+        if folder_path in pcap_path.parents:
+            gt_path = gt
+            break
+
     if gt_path:
-        df_gt = pd.read_csv(gt_path, low_memory=False) 
+        df_gt = pd.read_csv(gt_path, low_memory=False)
     else:
         print(f"No ground truth found for PCAP: {pcap_file}")
-
+        return (0, 0, 0, 0, True)
+    
     column_mapping = {
     "srcip": "src_ip",
     "sport": "src_port",
@@ -39,31 +51,25 @@ def process_snort_logs_UNSWNB15(pcap_file):
     
     column_names = ["timestamp", "pkt_num", "proto", "pkt_gen", "pkt_len", "dir", "src_ap", "dst_ap", "rule", "action", "msg", "class", "start_time"]
 
-    # Load the Snort alert CSV file
-    df_snort = pd.read_csv(log_file, names=column_names)
+    df_snort = pd.read_csv(log_file, names=column_names, on_bad_lines='skip')
 
-    # Split 'src_ap' and 'dst_ap' into IP and Port (specific to snort)
     df_snort[['src_ip', 'src_port']] = df_snort['src_ap'].str.split(':', n=1, expand=True)
     df_snort[['dest_ip', 'dest_port']] = df_snort['dst_ap'].str.split(':', n=1, expand=True)
     df_snort['src_ip'] = df_snort['src_ip'].str.strip()
     df_snort['dest_ip'] = df_snort['dest_ip'].str.strip()
     df_snort['proto'] = df_snort['proto'].str.strip().str.lower()
     
-    # Rename 'action' to 'flow_alerted' and set it to True
-    df_snort.rename(columns={'action': 'flow_alerted'}, inplace=True)
-    df_snort['flow_alerted'] = True  # Set all values in flow_alerted to True
 
-    # Convert ports to integers for consistency
+    df_snort.rename(columns={'action': 'flow_alerted'}, inplace=True)
+    df_snort['flow_alerted'] = True  
+
     df_snort['src_port'] = pd.to_numeric(df_snort['src_port'], errors='coerce').astype("Int64")
     df_snort['dest_port'] = pd.to_numeric(df_snort['dest_port'], errors='coerce').astype("Int64")
 
-    # Keep only the necessary columns
     df_snort = df_snort[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'flow_alerted']]
 
-    # Drop duplicates to get alerts for flows instead of individual packets
     df_snort = df_snort.drop_duplicates(subset=["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"])
-    
-    # Using zeek here to extract all the flows from the pcap file since snort only logs alerts and not also benign flows
+
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
     cmd = [
@@ -93,7 +99,7 @@ def process_snort_logs_UNSWNB15(pcap_file):
     df_zeek_flows.columns = cols
 
     df_zeek_flows = df_zeek_flows[["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"]]
-    df_zeek_flows["start_time"] = df_zeek_flows["start_time"].astype(int)
+    df_zeek_flows["start_time"] = df_zeek_flows["start_time"].round()
 
     df_snort = pd.merge(df_zeek_flows, df_snort, how='left', on=['src_ip','src_port','dest_ip','dest_port','proto', 'start_time'],suffixes=('_zeek_flows', '_snort'))
 

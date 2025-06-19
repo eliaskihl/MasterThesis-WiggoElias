@@ -58,9 +58,8 @@ def process_suricata_logs_TIISSRC23(pcap_file):
     }
 
     df_gt.rename(columns=column_mapping, inplace=True)
-    df_gt = df_gt[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'flow_alerted']]  # Keep only necessary columns
+    df_gt = df_gt[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto', 'start_time', 'flow_alerted']]  
 
-    # Your replace operation
     df_gt['flow_alerted'] = df_gt['flow_alerted'].replace({'Benign': False, 'Malicious': True})
     df_gt['proto'] = df_gt['proto'].replace({6.0: 'tcp', 17.0: 'udp', 0.0: 'hopopt'})
     df_gt['src_port'] = pd.to_numeric(df_gt['src_port'], errors='coerce').astype('Int64')
@@ -78,12 +77,11 @@ def process_suricata_logs_TIISSRC23(pcap_file):
     df_suricata['start_time'] = df_suricata['flow'].apply(lambda x: x.get('start') if isinstance(x, dict) else None)
     df_suricata['start_time'] = df_suricata['start_time'].apply(lambda x: int(datetime.strptime(x[:19], '%Y-%m-%dT%H:%M:%S').timestamp() + 3600) if pd.notnull(x) else None)
 
-    df_suricata = df_suricata[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto','start_time', 'flow_alerted']]  # Keep only necessary columns
+    df_suricata = df_suricata[['src_ip', 'src_port', 'dest_ip', 'dest_port', 'proto','start_time', 'flow_alerted']]  
     df_suricata['proto'] = df_suricata['proto'].str.lower()
     df_suricata["src_port"] = pd.to_numeric(df_suricata["src_port"], errors="coerce").astype("Int64")
     df_suricata["dest_port"] = pd.to_numeric(df_suricata["dest_port"], errors="coerce").astype("Int64")
 
-    # Using zeek here to extract all the flows from the pcap file 
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
     cmd = [
@@ -114,7 +112,6 @@ def process_suricata_logs_TIISSRC23(pcap_file):
 
     df_zeek_flows = df_zeek_flows[["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"]]
     df_zeek_flows["start_time"] = df_zeek_flows["start_time"].astype(int)
-
 
     df_suricata = pd.merge(df_zeek_flows, df_suricata, how='left', on=['src_ip','src_port','dest_ip','dest_port','proto', 'start_time'],suffixes=('_zeek_flows', '_suricata'))
 

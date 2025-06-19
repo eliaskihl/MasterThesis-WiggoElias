@@ -6,15 +6,40 @@ from datetime import datetime
 def process_suricata_logs_CICIDS2017(pcap_file):
     pd.set_option('future.no_silent_downcasting', True)
     
+#     pcap_to_gt_map = {
+#     "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+#     "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+#     "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+#     "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+#     "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv",
+# }
     pcap_to_gt_map = {
-    "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv",
-    "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_small.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
-
+  "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours_00000_20170703135558.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours_00001_20170703143352.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours_00002_20170703145005.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Monday-WorkingHours_00003_20170703180220.pcap": "../datasets/CIC-IDS2017/ground_truth/Monday-WorkingHours.csv",
+  
+  "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_00000_20170704135332.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_00001_20170704142614.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_00002_20170704144719.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Tuesday-WorkingHours_00003_20170704182950.pcap": "../datasets/CIC-IDS2017/ground_truth/Tuesday-WorkingHours.csv",
+  
+  "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours_00000_20170705134242.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours_00001_20170705135921.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours_00002_20170705154341.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Wednesday-WorkingHours_00003_20170705164151.pcap": "../datasets/CIC-IDS2017/ground_truth/Wednesday-WorkingHours.csv",
+  
+  "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours_00000_20170706135858.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours_00001_20170706141854.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours_00002_20170706163710.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Thursday-WorkingHours_00003_20170706193716.pcap": "../datasets/CIC-IDS2017/ground_truth/Thursday-WorkingHours.csv",
+  
+  "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours_00000_20170707135939.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours_00001_20170707142525.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours_00002_20170707160709.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv",
+  "../datasets/CIC-IDS2017/pcap/Friday-WorkingHours_00003_20170707201008.pcap": "../datasets/CIC-IDS2017/ground_truth/Friday-WorkingHours.csv"
 }
+    
 
     gt_path = pcap_to_gt_map.get(pcap_file) 
     if gt_path:
@@ -60,7 +85,6 @@ def process_suricata_logs_CICIDS2017(pcap_file):
     df_suricata["dest_port"] = pd.to_numeric(df_suricata["dest_port"], errors="coerce").astype("Int64")
 
     
-    # Using zeek here to extract all the flows from the pcap file 
     temp = open(f"./tmp/temp.log", "w")
     err = open(f"./tmp/err.log", "w")
     cmd = [
@@ -91,6 +115,7 @@ def process_suricata_logs_CICIDS2017(pcap_file):
 
     df_zeek_flows = df_zeek_flows[["src_ip", "src_port", "dest_ip", "dest_port", "proto", "start_time"]]
     df_zeek_flows["start_time"] = df_zeek_flows["start_time"].astype(int) - 7200
+
 
     df_suricata = pd.merge(df_zeek_flows, df_suricata, how='left', on=['src_ip','src_port','dest_ip','dest_port','proto', 'start_time'],suffixes=('_zeek_flows', '_suricata'))
 
