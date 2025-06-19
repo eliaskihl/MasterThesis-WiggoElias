@@ -6,15 +6,7 @@ img
 /*/RUN.md
 *__pycache__
 python/sys_pref/suricata/logs
-python/security_related/datasets/TII-SSRC-23/pcap
-python/security_related/datasets/TII-SSRC-23/ground_truth
 python/security_related/zeek/config
-python/security_related/datasets/UNSW-NB15/pcap
-python/security_related/datasets/UNSW-NB15/ground_truth
-python/security_related/datasets/CIC-IDS2017/pcap
-python/security_related/datasets/CIC-IDS2017/ground_truth
-python/security_related/datasets/BOT-IOT/pcap
-python/security_related/datasets/BOT-IOT/ground_truth
 python/security_related/suricata/logs
 python/security_related/suricata/config
 python/security_related/snort/logs
