@@ -12,26 +12,5 @@ def install_dependencies() -> None:
     subprocess.run(["pip", "install", "-r", str(requirements_file)], check=True)
 
 
-def extract_groundtruth(zip_dirs):
-    for zip_dir in zip_dirs:
-        for filename in os.listdir(zip_dir):
-            if filename.endswith(".zip"):
-                zip_path = os.path.join(zip_dir, filename)
-                extract_path = zip_dir  # Extract directly into the same folder
-
-                print(f"Extracting {filename} into {extract_path}...")
-                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(extract_path)
-                print(f"Extracted {filename}")
-                os.remove(zip_path)
-
-
 if __name__ == "__main__":
-    zip_directories = [
-    "./python/security_related/datasets/BOT-IOT/ground_truth",
-    "./python/security_related/datasets/CIC-IDS2017/ground_truth",
-    "./python/security_related/datasets/TII-SSRC-23/ground_truth",
-    "./python/security_related/datasets/UNSW-NB15/ground_truth"
-    ]
-    # extract_groundtruth(zip_directories)
     install_dependencies()
