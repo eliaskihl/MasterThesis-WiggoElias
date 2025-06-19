@@ -13,8 +13,7 @@ services:
       - ./python/ids_configuration/zeek/rules/test-all-policy.zeek:/usr/local/zeek/share/zeek/test-all-policy.zeek
       - ./python/security_related/traffic_generators:/traffic_generators
 
-    network_mode: "host"
-    privileged: true  # Allow privileged mode
+    privileged: true  
     stdin_open: true
     tty: true
 
@@ -31,8 +30,8 @@ services:
       - ./python/ids_configuration/snort/rules:/snort/etc/snort/rules
       - ./python/security_related/traffic_generators:/traffic_generators
 
-    network_mode: "host"
-    privileged: true  # Allow privileged mode
+
+    privileged: true 
     stdin_open: true
     tty: true
 
@@ -49,8 +48,7 @@ services:
       - ./python/ids_configuration/suricata/rules:/usr/local/var/lib/suricata/rules
       - ./python/security_related/traffic_generators:/traffic_generators
 
-    network_mode: "host"
-    privileged: true  # Allow privileged mode
+    privileged: true 
     stdin_open: true
     tty: true
   id2t:
@@ -61,7 +59,6 @@ services:
     volumes:
       - ./python/security_related/traffic_generators:/traffic_generators
 
-    network_mode: "host"
-    privileged: true  # Allow privileged mode
+    privileged: true  
     stdin_open: true
     tty: true
